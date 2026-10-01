@@ -1,0 +1,7 @@
+### What a participant sees of a friend match.
+class: MatchView
+fields:
+  match: FriendMatch
+  hostName: String
+  guestName: String
+  youAreHost: bool

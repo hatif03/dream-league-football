@@ -1,0 +1,7 @@
+### A lobby plus the names the screen needs.
+class: LobbyView
+fields:
+  lobby: Lobby
+  hostName: String
+  guestName: String?
+  youAreHost: bool

@@ -1,0 +1,40 @@
+### A head-to-head match between two humans. The score is stored only when both
+### players sign the same claim.
+class: FriendMatch
+table: friend_match
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  lobbyId: UuidValue
+  ### The host's browser runs the simulation.
+  hostUserId: String?
+  guestUserId: String?
+  hostNation: String
+  guestNation: String
+  ### live | finished | abandoned | void
+  status: String
+  ### Each player's signed claim, as JSON: hostGoals, guestGoals, reason, leaver.
+  hostClaim: String?
+  guestClaim: String?
+  hostGoals: int?
+  guestGoals: int?
+  ### fulltime | abandoned | mismatch | timeout
+  endReason: String?
+  ### Empty on a draw, an abandon or a void match.
+  winnerUserId: String?
+  ### The player who left, for an abandoned match.
+  leaverUserId: String?
+  ### WebRTC handshake, cleared once the channel opens.
+  offer: String?
+  answer: String?
+  ### End-of-match numbers as JSON, reported by the host (counted by their simulation, not signed by the guest).
+  stats: String?
+  ### direct | relay, reported by the peers once connected.
+  transport: String?
+  startedAt: DateTime, defaultModel=now
+  firstClaimAt: DateTime?
+  endedAt: DateTime?
+indexes:
+  friend_match_host_idx:
+    fields: hostUserId
+  friend_match_guest_idx:
+    fields: guestUserId

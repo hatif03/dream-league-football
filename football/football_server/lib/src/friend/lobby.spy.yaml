@@ -1,0 +1,31 @@
+### A room where two players pick nations and ready up for a friend match.
+class: Lobby
+table: lobby
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  ### Short code a friend types to join.
+  code: String
+  hostUserId: String
+  guestUserId: String?
+  hostNation: String?
+  guestNation: String?
+  hostReady: bool
+  guestReady: bool
+  ### open | live | closed
+  status: String
+  ### Both players must run the same build; the join is refused otherwise.
+  clientVersion: String
+  ### Set when both are ready and the match row exists.
+  matchId: UuidValue?
+  ### Set when a player starts a rematch from the finished match.
+  rematchLobbyId: UuidValue?
+  createdAt: DateTime, defaultModel=now
+  updatedAt: DateTime
+indexes:
+  lobby_code_idx:
+    fields: code
+    unique: true
+  lobby_host_idx:
+    fields: hostUserId
+  lobby_guest_idx:
+    fields: guestUserId

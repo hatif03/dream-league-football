@@ -1,0 +1,6 @@
+### The WebRTC handshake as the polling peer sees it.
+class: SignalView
+fields:
+  offer: String?
+  answer: String?
+  status: String
