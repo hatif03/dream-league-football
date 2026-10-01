@@ -1,0 +1,8 @@
+### A player friend-match record. Draws count as draws, abandoned matches count for nobody.
+class: RecordView
+fields:
+  wins: int
+  draws: int
+  losses: int
+  abandoned: int
+  headToHead: List<HeadToHead>

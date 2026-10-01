@@ -1,0 +1,8 @@
+### Results against one opponent.
+class: HeadToHead
+fields:
+  opponentName: String
+  opponentUserId: String?
+  wins: int
+  draws: int
+  losses: int

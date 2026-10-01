@@ -1,0 +1,26 @@
+### Public game profile that sits next to a Serverpod auth user.
+class: UserProfile
+table: user_profile
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  ### The auth user's id (UUID string from session.authenticated.userIdentifier).
+  userId: String
+  ### Unique public name, shown as typed.
+  displayName: String
+  ### Lower-cased name, used for the case-insensitive unique index.
+  displayNameLower: String
+  region: String?
+  ### Nation id the player supports.
+  favouriteNation: String?
+  createdAt: DateTime, defaultModel=now
+  bannedUntil: DateTime?
+  termsAcceptedAt: DateTime?
+  ### Last time the signed-in app checked in; friends see an online dot while it is recent.
+  lastSeenAt: DateTime?
+indexes:
+  user_profile_user_idx:
+    fields: userId
+    unique: true
+  user_profile_name_idx:
+    fields: displayNameLower
+    unique: true
