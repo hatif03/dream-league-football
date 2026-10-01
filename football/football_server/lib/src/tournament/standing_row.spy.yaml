@@ -1,0 +1,15 @@
+### One line of a group table, already ranked.
+class: StandingRow
+fields:
+  groupName: String
+  nationId: String
+  position: int
+  played: int
+  won: int
+  drawn: int
+  lost: int
+  goalsFor: int
+  goalsAgainst: int
+  points: int
+  ### Finished in the top two, or among the eight best third-placed teams.
+  qualified: bool

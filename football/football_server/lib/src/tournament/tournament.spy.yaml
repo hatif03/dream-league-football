@@ -1,0 +1,16 @@
+### One solo World Cup run for a user.
+class: Tournament
+table: tournament
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  userId: String
+  nationId: String
+  ### group | r32 | r16 | qf | sf | final (the round being played) | eliminated | champion
+  status: String
+  ### Round the run ended in (e.g. "group"), when status is eliminated.
+  eliminatedIn: String?
+  createdAt: DateTime, defaultModel=now
+  finishedAt: DateTime?
+indexes:
+  tournament_user_idx:
+    fields: userId

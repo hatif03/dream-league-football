@@ -1,0 +1,30 @@
+### One fixture inside a run. Scores stay null until it has been played or simulated.
+class: TournamentFixture
+table: tournament_fixture
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  tournamentId: UuidValue
+  ### group | r32 | r16 | qf | sf | final
+  round: String
+  groupName: String
+  matchday: int
+  kickoffUtc: DateTime
+  homeNation: String
+  awayNation: String
+  venue: String
+  ### FIFA match number (73-104) for knockout games, null in the group stage.
+  matchNo: int?
+  homeScore: int?
+  awayScore: int?
+  ### Shootout goals when a knockout game was level after extra time.
+  homePens: int?
+  awayPens: int?
+  ### 90 | et | pens
+  decidedBy: String?
+  ### true when the user played it, false when the server simulated it.
+  playedByUser: bool
+  ### Client nonce of the saved result; makes the post idempotent.
+  nonce: String?
+indexes:
+  tournament_fixture_tournament_idx:
+    fields: tournamentId

@@ -1,0 +1,10 @@
+### Everything the client needs to draw a run.
+class: TournamentView
+fields:
+  tournament: Tournament
+  fixtures: List<TournamentFixture>
+  standings: List<StandingRow>
+  ### Fixture the user has to play next, null when the group stage is over.
+  nextFixtureId: UuidValue?
+  ### Matchday of that fixture (1-3), or 0.
+  matchday: int
