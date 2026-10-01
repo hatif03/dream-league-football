@@ -1,0 +1,4 @@
+### A rule or validation failure the player can read.
+exception: GameException
+fields:
+  message: String

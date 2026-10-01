@@ -35,3 +35,18 @@ Thumbs.db
 # Test screenshots and build info
 .e2e-shots/
 tsconfig.tsbuildinfo
+
+# Serverpod: secrets, the embedded dev database, the built web app (npm run build:web)
+football/football_server/config/passwords.yaml
+football/football_server/.serverpod/
+football/football_server/web/spa/
+football/football_server/*.log
+
+# Editor/agent tooling
+.cursor/
+
+# Hackathon brief (not part of the project)
+serverpod-hackathon.pdf
+
+# Logs
+*.log

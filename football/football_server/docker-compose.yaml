@@ -1,0 +1,30 @@
+services:
+  # Development services
+  postgres:
+    image: ghcr.io/serverpod/postgres:16
+    ports:
+      - "8090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: football
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?use the development database password from config/passwords.yaml}"
+    volumes:
+      - football_data:/var/lib/postgresql/data
+
+
+  # Test services
+  postgres_test:
+    image: ghcr.io/serverpod/postgres:16
+    ports:
+      - "9090:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_DB: football_test
+      POSTGRES_PASSWORD: "${POSTGRES_TEST_PASSWORD:?use the test database password from config/passwords.yaml}"
+    volumes:
+      - football_test_data:/var/lib/postgresql/data
+
+
+volumes:
+  football_data:
+  football_test_data:
