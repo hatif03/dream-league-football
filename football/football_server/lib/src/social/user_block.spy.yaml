@@ -1,0 +1,12 @@
+### One player blocking another: no invites, requests or shared rooms either way.
+class: UserBlock
+table: user_block
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  userId: String
+  blockedUserId: String
+  createdAt: DateTime, defaultModel=now
+indexes:
+  user_block_pair_idx:
+    fields: userId, blockedUserId
+    unique: true

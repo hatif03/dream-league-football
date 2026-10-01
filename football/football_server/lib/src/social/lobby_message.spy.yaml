@@ -1,0 +1,12 @@
+### A line of lobby chat. Stored on the room so a late joiner still sees it.
+class: LobbyMessage
+table: lobby_message
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  lobbyId: UuidValue
+  userId: String
+  text: String
+  createdAt: DateTime, defaultModel=now
+indexes:
+  lobby_message_lobby_idx:
+    fields: lobbyId

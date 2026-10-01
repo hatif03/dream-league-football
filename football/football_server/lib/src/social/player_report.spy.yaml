@@ -1,0 +1,11 @@
+### A report about a player, with the match it happened in.
+class: PlayerReport
+table: player_report
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  reporterId: String
+  targetId: String
+  matchId: UuidValue?
+  reason: String
+  createdAt: DateTime, defaultModel=now
+  resolvedAt: DateTime?

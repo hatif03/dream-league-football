@@ -1,0 +1,7 @@
+### Counts for the operator.
+class: AdminStats
+fields:
+  openLobbies: int
+  liveMatches: int
+  profiles: int
+  openReports: int

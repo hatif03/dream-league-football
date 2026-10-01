@@ -1,0 +1,16 @@
+### A friend request or an accepted friendship between two players.
+class: Friendship
+table: friendship
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  requesterId: String
+  addresseeId: String
+  ### pending | accepted
+  status: String
+  createdAt: DateTime, defaultModel=now
+indexes:
+  friendship_pair_idx:
+    fields: requesterId, addresseeId
+    unique: true
+  friendship_addressee_idx:
+    fields: addresseeId

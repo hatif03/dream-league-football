@@ -1,0 +1,5 @@
+### Public status for the sign-in screen and the lobby.
+class: LiveStatus
+fields:
+  maintenance: bool
+  message: String?

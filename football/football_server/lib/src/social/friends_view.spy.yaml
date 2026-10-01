@@ -1,0 +1,8 @@
+### Everything the friends panel needs in one call.
+class: FriendsView
+fields:
+  friends: List<PersonView>
+  incoming: List<PersonView>
+  outgoing: List<PersonView>
+  blocked: List<PersonView>
+  invites: List<InviteView>

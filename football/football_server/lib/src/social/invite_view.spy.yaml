@@ -1,0 +1,7 @@
+### An invite into a room, as the invited player sees it.
+class: InviteView
+fields:
+  lobbyId: UuidValue
+  code: String
+  fromName: String
+  createdAt: DateTime

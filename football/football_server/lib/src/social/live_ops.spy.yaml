@@ -1,0 +1,9 @@
+### Single row of switches the operators can flip without a deploy.
+class: LiveOps
+table: live_ops
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  ### While true no new rooms open; players can still sign in and play on.
+  maintenance: bool
+  message: String?
+  updatedAt: DateTime

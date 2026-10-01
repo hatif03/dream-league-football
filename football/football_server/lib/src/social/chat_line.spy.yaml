@@ -1,0 +1,8 @@
+### One chat line with the sender name filled in.
+class: ChatLine
+fields:
+  id: UuidValue
+  userId: String
+  name: String
+  text: String
+  createdAt: DateTime

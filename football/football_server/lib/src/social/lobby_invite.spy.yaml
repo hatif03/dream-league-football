@@ -1,0 +1,15 @@
+### A friend invited into a room. It lives as long as the room is open.
+class: LobbyInvite
+table: lobby_invite
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  lobbyId: UuidValue
+  fromUserId: String
+  toUserId: String
+  createdAt: DateTime, defaultModel=now
+indexes:
+  lobby_invite_pair_idx:
+    fields: lobbyId, toUserId
+    unique: true
+  lobby_invite_to_idx:
+    fields: toUserId

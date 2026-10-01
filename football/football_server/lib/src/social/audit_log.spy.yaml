@@ -1,0 +1,10 @@
+### What operators did: bans, voided matches, maintenance toggles.
+class: AuditLog
+table: audit_log
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  actorId: String
+  action: String
+  target: String?
+  detail: String?
+  createdAt: DateTime, defaultModel=now
