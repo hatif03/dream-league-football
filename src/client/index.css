@@ -1,0 +1,258 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,500;0,600;0,700;0,800;1,600;1,700;1,800&family=Barlow:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@source "./";
+
+/* Roomy screens only: wide AND tall. A phone held sideways is wide but short, so it keeps the mobile layout. */
+@custom-variant desk (@media (min-width: 768px) and (min-height: 520px));
+
+/* ----------------------------------------------------------------------------
+   "Matchday Night" design system — see UI_PLAN.md.
+   Indigo-to-royal-blue stadium night, glass panels, cyan primary, magenta for
+   live things, gold for the World Cup. Condensed italic display type.
+---------------------------------------------------------------------------- */
+
+@theme {
+  --font-display: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-heading: 'Barlow Condensed', 'Arial Narrow', sans-serif;
+  --font-body: 'Barlow', system-ui, sans-serif;
+
+  /* Surfaces */
+  --color-ink-950: #060520;
+  --color-ink-900: #0b0933;
+  --color-ink-800: #130f4a;
+  --color-ink-700: #1c1768;
+  --color-ink-600: #2a2397;
+  --color-ink-500: #4a43c4;
+
+  /* Text on dark */
+  --color-mist-100: #f4f3ff;
+  --color-mist-200: #dcd9ff;
+  --color-mist-300: #bcb8f0;
+  --color-mist-400: #9792d3;
+  --color-mist-500: #7a75b8;
+
+  /* Accents */
+  --color-neon-300: #8bf1ff;
+  --color-neon-400: #28e4ff;
+  --color-neon-500: #00c4ea;
+  --color-hot-400: #ff6aa8;
+  --color-hot-500: #ff3d8b;
+  --color-gold-400: #ffd54f;
+  --color-gold-500: #f5b800;
+  --color-win: #3df08a;
+  --color-loss: #ff5470;
+
+  /* Legacy names from the first design, remapped so nothing falls back to black-and-lime. */
+  --color-night-950: #060520;
+  --color-night-900: #0b0933;
+  --color-night-800: #130f4a;
+  --color-night-700: #1c1768;
+  --color-night-600: #2a2397;
+  --color-night-500: #7a75b8;
+  --color-night-400: #9792d3;
+  --color-night-300: #bcb8f0;
+  --color-night-200: #dcd9ff;
+  --color-volt-500: #28e4ff;
+  --color-volt-400: #6aeeff;
+  --color-volt-300: #a8f5ff;
+  --color-pitch-700: #1f6b3a;
+  --color-pitch-600: #258044;
+  --color-pitch-500: #2e9b53;
+
+  --animate-fade-in: fade-in 0.35s ease-out both;
+  --animate-slide-up: slide-up 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-pulse-volt: pulse-volt 1.6s ease-in-out infinite;
+  --animate-screen-in: screen-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes screen-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes pop { 0% { opacity: 0; transform: scale(0.6); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes pulse-volt { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+@keyframes count-pop { 0% { opacity: 0; transform: scale(2.2); } 30% { opacity: 1; transform: scale(1); } 100% { opacity: 0.2; transform: scale(0.85); } }
+
+html, body, #root { height: 100%; }
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-mist-100);
+  background: #060520;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---- Backdrop: stadium night with hatch and pitch markings -------------- */
+
+.app-bg {
+  position: relative;
+  min-height: 100%;
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(255, 61, 139, 0.22), transparent 60%),
+    radial-gradient(1000px 700px at 5% 110%, rgba(40, 228, 255, 0.18), transparent 60%),
+    linear-gradient(135deg, #0b0933 0%, #17116b 52%, #0b2a7d 100%);
+}
+.app-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.025) 0 2px, transparent 2px 22px);
+}
+.app-bg::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: min(120vw, 1500px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 0 0 80px rgba(255, 255, 255, 0.008);
+  pointer-events: none;
+}
+
+/* ---- Surfaces ----------------------------------------------------------- */
+
+.glass {
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.035));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 6px;
+}
+.glass-solid {
+  background: linear-gradient(160deg, rgba(25, 20, 100, 0.92), rgba(12, 10, 52, 0.96));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 6px;
+}
+
+/* Tiles: the block-style menu items. Focus is the one visual rule: scale, white outline, glow. */
+.tile {
+  position: relative;
+  display: flex;
+  text-align: left;
+  overflow: hidden;
+  border-radius: 4px;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+  cursor: pointer;
+}
+.tile::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 4px;
+  background: var(--accent, #28e4ff);
+}
+.tile:hover,
+.tile:focus-visible,
+.tile[data-focus='true'] {
+  transform: translateY(-3px) scale(1.025);
+  border-color: #fff;
+  background: linear-gradient(170deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.07));
+  box-shadow: 0 0 0 2px #fff, 0 14px 40px rgba(0, 0, 0, 0.45), 0 0 34px color-mix(in srgb, var(--accent, #28e4ff) 55%, transparent);
+  outline: none;
+  z-index: 2;
+}
+.tile:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ---- Buttons: skewed parallelograms ----------------------------------- */
+
+.btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.6rem;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-style: italic;
+  font-size: 1.05rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-mist-100);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transform: skewX(-9deg);
+  transition: transform 0.14s ease, box-shadow 0.14s ease, background 0.14s ease;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.btn > * { transform: skewX(9deg); display: inline-flex; align-items: center; gap: 0.5rem; }
+.btn:hover,
+.btn:focus-visible {
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 0 2px #fff, 0 0 26px rgba(40, 228, 255, 0.45);
+  transform: skewX(-9deg) translateY(-2px);
+  outline: none;
+}
+.btn:active { transform: skewX(-9deg) translateY(0) scale(0.98); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; transform: skewX(-9deg); }
+.btn-primary {
+  color: #061038;
+  background: linear-gradient(180deg, #7ff0ff, #19d3f2);
+  border-color: transparent;
+}
+.btn-primary:hover, .btn-primary:focus-visible { background: linear-gradient(180deg, #a6f5ff, #3de0fa); }
+.btn-hot {
+  color: #fff;
+  background: linear-gradient(180deg, #ff5fa0, #e02574);
+  border-color: transparent;
+}
+.btn-danger {
+  color: #fff;
+  background: linear-gradient(180deg, #ff6b83, #d9334f);
+  border-color: transparent;
+}
+.btn-lg { min-height: 54px; padding: 0 2.2rem; font-size: 1.3rem; }
+.btn-sm { min-height: 36px; padding: 0 1.1rem; font-size: 0.9rem; }
+
+/* ---- Form fields -------------------------------------------------------- */
+
+.field {
+  width: 100%;
+  min-height: 46px;
+  padding: 0.55rem 0.9rem;
+  color: #fff;
+  background: rgba(6, 5, 32, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 4px;
+  font-size: 1rem;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+.field::placeholder { color: var(--color-mist-500); }
+.field:focus { outline: none; border-color: #28e4ff; box-shadow: 0 0 0 3px rgba(40, 228, 255, 0.35); }
+.field[aria-invalid='true'] { border-color: var(--color-loss); }
+select.field { appearance: none; background-image: linear-gradient(45deg, transparent 50%, #bcb8f0 50%), linear-gradient(135deg, #bcb8f0 50%, transparent 50%); background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px; background-repeat: no-repeat; padding-right: 2rem; }
+select.field option { color: #0b0933; }
+
+/* Type helpers */
+.t-display { font-family: var(--font-display); font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: 0.02em; line-height: 0.95; }
+.t-label { font-family: var(--font-display); font-weight: 600; text-transform: uppercase; letter-spacing: 0.18em; font-size: 0.78rem; color: var(--color-mist-400); }
+.tabular { font-variant-numeric: tabular-nums; }
+
+.skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.14) 50%, rgba(255,255,255,0.05) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: 4px; }
+
+/* Scrollbars */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.25) transparent; }
+
+/* Safe areas and phones */
+.safe-x { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+.safe-b { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+.dvh { height: 100dvh; }
+
+button, [role='button'], .tile, .btn { touch-action: manipulation; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
