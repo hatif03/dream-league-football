@@ -1,0 +1,61 @@
+liveOps:
+  - get:
+admin:
+  - setMaintenance:
+  - suspend:
+  - voidMatch:
+  - stats:
+emailIdp:
+  - login:
+  - startRegistration:
+  - verifyRegistrationCode:
+  - finishRegistration:
+  - startPasswordReset:
+  - verifyPasswordResetCode:
+  - finishPasswordReset:
+  - hasAccount:
+jwtRefresh:
+  - refreshAccessToken:
+friendMatch:
+  - get:
+  - postOffer:
+  - postAnswer:
+  - getSignal:
+  - connected:
+  - leave:
+  - claim:
+  - history:
+lobby:
+  - create:
+  - join:
+  - get:
+  - setNation:
+  - setReady:
+  - leave:
+  - rematch:
+profile:
+  - me:
+  - isNameAvailable:
+  - createProfile:
+  - updateProfile:
+  - record:
+  - deleteAccount:
+chat:
+  - send:
+  - list:
+friends:
+  - list:
+  - request:
+  - accept:
+  - remove:
+  - block:
+  - unblock:
+  - invite:
+  - dismissInvite:
+report:
+  - create:
+tournament:
+  - current:
+  - start:
+  - abandon:
+  - submitResult:
