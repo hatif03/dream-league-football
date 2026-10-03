@@ -40,7 +40,7 @@ Note: this project was created with `--ide none`, so the `serverpod` MCP server 
 
 ## What this server is
 
-The back end of "World Cup 2026", an arcade football game played in the browser (the React app is in the repo root, `src/client`). It stores accounts, solo World Cup runs, friend rooms and results; the live match itself runs in a player's browser. Read `../PLAN.md` sections 0 and 0b before changing behaviour.
+The back end of **Dream League Football**, an arcade football game played in the browser (the React app is in the repo root, `src/client`). It stores accounts, solo World Cup runs, friend rooms and results; the live match itself runs in a player's browser. The product name appears in `lib/server.dart` as the sign-in email name (`appDisplayName`); the project id `football` and the package names `football_server` / `football_client` are kept on purpose. Documentation: `../docs/SERVERPOD.md` (start here), `../docs/API.md`, `../docs/MULTIPLAYER.md`; design history in `../PLAN.md` sections 0 and 0b.
 
 - Endpoints are called from TypeScript with plain JSON (`POST /<endpoint>/<method>`, Bearer JWT), not the generated Dart client. After changing an endpoint signature, update `../src/client/api/*.ts`.
 - `lib/src/profile`: display name, record, account deletion. `lib/src/tournament`: the solo World Cup (group simulation, the official 2026 bracket, extra-time and shootout results). `lib/src/friend`: rooms, the WebRTC handshake on the match row, two-signature results (`claims.dart`), and the WebSocket relay route. `lib/src/social`: friends, blocks, invites, chat, reports. `lib/src/admin`: public maintenance status and operator tools (user ids come from the `adminUserIds` password).
