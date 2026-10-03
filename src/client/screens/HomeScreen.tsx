@@ -32,7 +32,7 @@ export default function HomeScreen() {
   const online = friends?.friends.filter((f) => f.online).length ?? 0;
 
   useEffect(() => {
-    document.title = 'World Cup 2026';
+    document.title = 'Dream League Football';
     // Old shared links looked like /?room=CODE.
     const code = new URLSearchParams(location.search).get('room');
     if (code) navigate(`/online?join=${encodeURIComponent(code)}`, { replace: true });

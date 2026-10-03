@@ -124,10 +124,10 @@ function drawCrowd(ctx: CanvasRenderingContext2D, camX: number) {
   ctx.fillStyle = 'rgba(198,255,46,0.55)';
   ctx.font = '700 11px Oswald, sans-serif';
   ctx.textAlign = 'center';
-  for (let x = x0; x < x0 + span; x += 220) {
+  for (let x = x0; x < x0 + span; x += 400) {
     const sx = x + offset;
-    if (sx < -110 || sx > CANVAS_W + 110) continue;
-    ctx.fillText('W O R L D   C U P   2 0 2 6', sx, bottom + hoardH / 2 + 4);
+    if (sx < -200 || sx > CANVAS_W + 200) continue;
+    ctx.fillText('D R E A M   L E A G U E   F O O T B A L L', sx, bottom + hoardH / 2 + 4);
   }
 }
 

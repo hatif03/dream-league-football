@@ -54,11 +54,11 @@ export function AppShell() {
         Skip to content
       </a>
 
-      <header className="safe-x relative z-20 flex shrink-0 items-center gap-4 border-b border-white/10 bg-ink-950/50 py-2 [@media(max-height:520px)]:py-1 backdrop-blur-md">
-        <NavLink to="/" className="flex items-center gap-2 pr-2" aria-label="World Cup 2026 home">
+      <header className="safe-x relative z-20 flex shrink-0 items-center gap-2 sm:gap-4 border-b border-white/10 bg-ink-950/50 py-2 [@media(max-height:520px)]:py-1 backdrop-blur-md">
+        <NavLink to="/" className="flex min-w-0 items-center gap-2 pr-1 sm:pr-2" aria-label="Dream League Football home">
           <Ball />
-          <span className="t-display whitespace-nowrap text-2xl text-white">
-            World Cup <span className="text-neon-400">2026</span>
+          <span className="t-display truncate text-xl text-white sm:text-2xl">
+            Dream League <span className="text-neon-400">Football</span>
           </span>
         </NavLink>
 
@@ -83,7 +83,7 @@ export function AppShell() {
         </nav>
         <div className="flex-1 desk:hidden" />
 
-        <div className="flex items-center gap-3">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {profile && <NotificationBell />}
           {profile ? (
             <NavLink to="/profile" className="flex items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-4 ring-1 ring-white/20 hover:bg-white/20" aria-label="Your profile">
@@ -133,7 +133,7 @@ export function AppShell() {
 
 function Ball() {
   return (
-    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true">
+    <svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true" className="shrink-0">
       <circle cx="16" cy="16" r="14" fill="#fff" />
       <path d="M16 9l5 3.6-1.9 5.9h-6.2L11 12.6z" fill="#0b0933" />
       <path d="M16 9V4M21 12.6l4.8-1.6M19.1 18.5l3 4.2M12.9 18.5l-3 4.2M11 12.6L6.2 11" stroke="#0b0933" strokeWidth="1.6" fill="none" />

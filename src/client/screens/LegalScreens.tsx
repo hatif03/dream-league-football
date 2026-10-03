@@ -19,7 +19,7 @@ export function TermsScreen() {
     <Doc title="Terms">
       <section>
         <H>Using the game</H>
-        <p>World Cup 2026 is a free browser game. Play fair: no cheating, no abuse in chat, no impersonation. We may suspend accounts that break these rules.</p>
+        <p>Dream League Football is a free browser game. Play fair: no cheating, no abuse in chat, no impersonation. We may suspend accounts that break these rules.</p>
       </section>
       <section>
         <H>Your account</H>

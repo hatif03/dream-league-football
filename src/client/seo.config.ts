@@ -23,10 +23,10 @@ export interface SeoConfig {
   formatTitle: (title?: string) => string;
 }
 
-const siteName = 'World Cup 2026';
+const siteName = 'Dream League Football';
 
 const description =
-  'World Cup 2026 is a fast, arcade browser football game. Grab the ball, beat the keeper, and score against the CPU using classic keyboard controls.';
+  'Dream League Football is a fast, arcade browser football game. Play a solo 48-nation World Cup, challenge friends online, or practise against the CPU with keyboard, controller or touch.';
 
 export const seoConfig: SeoConfig = {
   siteName,

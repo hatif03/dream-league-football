@@ -453,7 +453,7 @@ function ShareBlock({ code, link, lobbyId, canInvite }: { code: string; link: st
       </button>
       <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
         <Btn variant="primary" onClick={copy}>{copied ? <><Check size={18} /> Copied</> : <><Copy size={18} /> Copy invite link</>}</Btn>
-        {canShare && <Btn onClick={() => navigator.share({ title: 'World Cup 2026', text: 'Play me at World Cup 2026!', url: link }).catch(() => {})}><Share2 size={18} /> Share…</Btn>}
+        {canShare && <Btn onClick={() => navigator.share({ title: 'Dream League Football', text: 'Play me at Dream League Football!', url: link }).catch(() => {})}><Share2 size={18} /> Share…</Btn>}
         <Btn onClick={() => setShowQr((s) => !s)}>{showQr ? 'Hide QR' : 'Show QR code'}</Btn>
       </div>
       {showQr && <div className="mt-4 flex justify-center">{qr ? <img src={qr} alt={`QR code for ${link}`} className="h-48 w-48 rounded bg-white p-1" /> : <Spinner label="Making QR" />}</div>}
