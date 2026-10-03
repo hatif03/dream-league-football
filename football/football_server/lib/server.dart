@@ -29,7 +29,7 @@ void run(List<String> args) async {
       // service. If you want to use a custom provider for sending emails, use
       // `EmailIdpConfigFromPasswords`.
       ServerpodCloudEmailIdpConfig(
-        appDisplayName: 'football',
+        appDisplayName: 'Dream League Football',
       ),
     ],
   );
