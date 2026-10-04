@@ -10,6 +10,12 @@ fields:
   ### Lower-cased name, used for the case-insensitive unique index.
   displayNameLower: String
   region: String?
+  ### Which of the pre-made avatars (0-23) the player picked; null until they choose.
+  avatar: int?
+  ### The player's saved settings (keys, formation, match length...) as JSON, so a new device picks them up.
+  settings: String?
+  ### The player's club crest and kit as JSON.
+  club: String?
   ### Nation id the player supports.
   favouriteNation: String?
   createdAt: DateTime, defaultModel=now

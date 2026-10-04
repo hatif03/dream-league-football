@@ -13,6 +13,8 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'package:football_server/src/generated/friend/match_view.dart'
     as _ie6yuv0z;
+import 'package:football_server/src/generated/rankings/achievement_view.dart'
+    as _iyyv6ovn;
 import 'package:football_server/src/generated/social/chat_line.dart'
     as _iejvwr7c;
 import 'package:serverpod/protocol.dart' as _isp;
@@ -28,6 +30,9 @@ import 'friend/match_view.dart' as _in465to7;
 import 'friend/signal_view.dart' as _iwiyctoy;
 import 'game_exception.dart' as _iva62vub;
 import 'profile/user_profile.dart' as _ik2xsncp;
+import 'rankings/achievement_view.dart' as _imlks8jq;
+import 'rankings/leader_entry.dart' as _i4ke8vzx;
+import 'rankings/leaderboard_view.dart' as _ikumlxuj;
 import 'social/admin_stats.dart' as _ih7dxm8c;
 import 'social/audit_log.dart' as _i2419br0;
 import 'social/chat_line.dart' as _ixke9pf1;
@@ -54,6 +59,9 @@ export 'friend/match_view.dart';
 export 'friend/signal_view.dart';
 export 'game_exception.dart';
 export 'profile/user_profile.dart';
+export 'rankings/achievement_view.dart';
+export 'rankings/leader_entry.dart';
+export 'rankings/leaderboard_view.dart';
 export 'social/admin_stats.dart';
 export 'social/audit_log.dart';
 export 'social/chat_line.dart';
@@ -1011,6 +1019,24 @@ class Protocol extends _is.DatabaseSerializationManager {
           dartType: 'String?',
         ),
         _isp.ColumnDefinition(
+          name: 'avatar',
+          columnType: _isp.ColumnType.bigint,
+          isNullable: true,
+          dartType: 'int?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'settings',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
+          name: 'club',
+          columnType: _isp.ColumnType.text,
+          isNullable: true,
+          dartType: 'String?',
+        ),
+        _isp.ColumnDefinition(
           name: 'favouriteNation',
           columnType: _isp.ColumnType.text,
           isNullable: true,
@@ -1125,6 +1151,15 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _ik2xsncp.UserProfile) {
       return _ik2xsncp.UserProfile.fromJson(data) as T;
     }
+    if (t == _imlks8jq.AchievementView) {
+      return _imlks8jq.AchievementView.fromJson(data) as T;
+    }
+    if (t == _i4ke8vzx.LeaderEntry) {
+      return _i4ke8vzx.LeaderEntry.fromJson(data) as T;
+    }
+    if (t == _ikumlxuj.LeaderboardView) {
+      return _ikumlxuj.LeaderboardView.fromJson(data) as T;
+    }
     if (t == _ih7dxm8c.AdminStats) {
       return _ih7dxm8c.AdminStats.fromJson(data) as T;
     }
@@ -1204,6 +1239,17 @@ class Protocol extends _is.DatabaseSerializationManager {
     if (t == _is.getType<_ik2xsncp.UserProfile?>()) {
       return (data != null ? _ik2xsncp.UserProfile.fromJson(data) : null) as T;
     }
+    if (t == _is.getType<_imlks8jq.AchievementView?>()) {
+      return (data != null ? _imlks8jq.AchievementView.fromJson(data) : null)
+          as T;
+    }
+    if (t == _is.getType<_i4ke8vzx.LeaderEntry?>()) {
+      return (data != null ? _i4ke8vzx.LeaderEntry.fromJson(data) : null) as T;
+    }
+    if (t == _is.getType<_ikumlxuj.LeaderboardView?>()) {
+      return (data != null ? _ikumlxuj.LeaderboardView.fromJson(data) : null)
+          as T;
+    }
     if (t == _is.getType<_ih7dxm8c.AdminStats?>()) {
       return (data != null ? _ih7dxm8c.AdminStats.fromJson(data) : null) as T;
     }
@@ -1263,6 +1309,12 @@ class Protocol extends _is.DatabaseSerializationManager {
       return (data != null ? _i8117dck.TournamentView.fromJson(data) : null)
           as T;
     }
+    if (t == List<_i4ke8vzx.LeaderEntry>) {
+      return (data as List)
+              .map((e) => deserialize<_i4ke8vzx.LeaderEntry>(e))
+              .toList()
+          as T;
+    }
     if (t == List<_i2tinm30.PersonView>) {
       return (data as List)
               .map((e) => deserialize<_i2tinm30.PersonView>(e))
@@ -1299,6 +1351,12 @@ class Protocol extends _is.DatabaseSerializationManager {
               .toList()
           as T;
     }
+    if (t == List<_iyyv6ovn.AchievementView>) {
+      return (data as List)
+              .map((e) => deserialize<_iyyv6ovn.AchievementView>(e))
+              .toList()
+          as T;
+    }
     if (t == List<_iejvwr7c.ChatLine>) {
       return (data as List)
               .map((e) => deserialize<_iejvwr7c.ChatLine>(e))
@@ -1326,6 +1384,9 @@ class Protocol extends _is.DatabaseSerializationManager {
       _iwiyctoy.SignalView => 'SignalView',
       _iva62vub.GameException => 'GameException',
       _ik2xsncp.UserProfile => 'UserProfile',
+      _imlks8jq.AchievementView => 'AchievementView',
+      _i4ke8vzx.LeaderEntry => 'LeaderEntry',
+      _ikumlxuj.LeaderboardView => 'LeaderboardView',
       _ih7dxm8c.AdminStats => 'AdminStats',
       _i2419br0.AuditLog => 'AuditLog',
       _ixke9pf1.ChatLine => 'ChatLine',
@@ -1373,6 +1434,12 @@ class Protocol extends _is.DatabaseSerializationManager {
         return 'GameException';
       case _ik2xsncp.UserProfile():
         return 'UserProfile';
+      case _imlks8jq.AchievementView():
+        return 'AchievementView';
+      case _i4ke8vzx.LeaderEntry():
+        return 'LeaderEntry';
+      case _ikumlxuj.LeaderboardView():
+        return 'LeaderboardView';
       case _ih7dxm8c.AdminStats():
         return 'AdminStats';
       case _i2419br0.AuditLog():
@@ -1457,6 +1524,15 @@ class Protocol extends _is.DatabaseSerializationManager {
     }
     if (dataClassName == 'UserProfile') {
       return deserialize<_ik2xsncp.UserProfile>(data['data']);
+    }
+    if (dataClassName == 'AchievementView') {
+      return deserialize<_imlks8jq.AchievementView>(data['data']);
+    }
+    if (dataClassName == 'LeaderEntry') {
+      return deserialize<_i4ke8vzx.LeaderEntry>(data['data']);
+    }
+    if (dataClassName == 'LeaderboardView') {
+      return deserialize<_ikumlxuj.LeaderboardView>(data['data']);
     }
     if (dataClassName == 'AdminStats') {
       return deserialize<_ih7dxm8c.AdminStats>(data['data']);

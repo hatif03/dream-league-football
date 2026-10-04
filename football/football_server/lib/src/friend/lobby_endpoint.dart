@@ -280,6 +280,8 @@ class LobbyEndpoint extends Endpoint {
     return LobbyView(
       lobby: lobby,
       hostName: await _name(session, lobby.hostUserId),
+      hostAvatar: await avatarOf(session, lobby.hostUserId),
+      guestAvatar: await avatarOf(session, lobby.guestUserId),
       guestName: lobby.guestUserId == null ? null : await _name(session, lobby.guestUserId!),
       youAreHost: lobby.hostUserId == userId,
     );

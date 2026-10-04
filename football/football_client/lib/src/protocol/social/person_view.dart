@@ -18,12 +18,14 @@ abstract class PersonView
   PersonView._({
     required this.userId,
     required this.name,
+    this.avatar,
     required this.online,
   });
 
   factory PersonView({
     required String userId,
     required String name,
+    int? avatar,
     required bool online,
   }) = _PersonViewImpl;
 
@@ -31,6 +33,7 @@ abstract class PersonView
     return PersonView(
       userId: jsonSerialization['userId'] as String,
       name: jsonSerialization['name'] as String,
+      avatar: jsonSerialization['avatar'] as int?,
       online: _isc.BoolJsonExtension.fromJson(jsonSerialization['online']),
     );
   }
@@ -38,6 +41,8 @@ abstract class PersonView
   String userId;
 
   String name;
+
+  int? avatar;
 
   /// Checked in within the last minute or so.
   bool online;
@@ -48,6 +53,7 @@ abstract class PersonView
   PersonView copyWith({
     String? userId,
     String? name,
+    int? avatar,
     bool? online,
   });
   @override
@@ -56,6 +62,7 @@ abstract class PersonView
       '__className__': 'PersonView',
       'userId': userId,
       'name': name,
+      if (avatar != null) 'avatar': avatar,
       'online': online,
     };
   }
@@ -66,6 +73,7 @@ abstract class PersonView
       '__className__': 'PersonView',
       'userId': userId,
       'name': name,
+      if (avatar != null) 'avatar': avatar,
       'online': online,
     };
   }
@@ -76,14 +84,18 @@ abstract class PersonView
   }
 }
 
+class _Undefined {}
+
 class _PersonViewImpl extends PersonView {
   _PersonViewImpl({
     required String userId,
     required String name,
+    int? avatar,
     required bool online,
   }) : super._(
          userId: userId,
          name: name,
+         avatar: avatar,
          online: online,
        );
 
@@ -94,11 +106,13 @@ class _PersonViewImpl extends PersonView {
   PersonView copyWith({
     String? userId,
     String? name,
+    Object? avatar = _Undefined,
     bool? online,
   }) {
     return PersonView(
       userId: userId ?? this.userId,
       name: name ?? this.name,
+      avatar: avatar is int? ? avatar : this.avatar,
       online: online ?? this.online,
     );
   }

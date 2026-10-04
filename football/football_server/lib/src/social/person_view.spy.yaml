@@ -3,5 +3,6 @@ class: PersonView
 fields:
   userId: String
   name: String
+  avatar: int?
   ### Checked in within the last minute or so.
   online: bool

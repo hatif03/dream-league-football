@@ -21,6 +21,9 @@ abstract class UserProfile
     required this.displayName,
     required this.displayNameLower,
     this.region,
+    this.avatar,
+    this.settings,
+    this.club,
     this.favouriteNation,
     DateTime? createdAt,
     this.bannedUntil,
@@ -34,6 +37,9 @@ abstract class UserProfile
     required String displayName,
     required String displayNameLower,
     String? region,
+    int? avatar,
+    String? settings,
+    String? club,
     String? favouriteNation,
     DateTime? createdAt,
     DateTime? bannedUntil,
@@ -50,6 +56,9 @@ abstract class UserProfile
       displayName: jsonSerialization['displayName'] as String,
       displayNameLower: jsonSerialization['displayNameLower'] as String,
       region: jsonSerialization['region'] as String?,
+      avatar: jsonSerialization['avatar'] as int?,
+      settings: jsonSerialization['settings'] as String?,
+      club: jsonSerialization['club'] as String?,
       favouriteNation: jsonSerialization['favouriteNation'] as String?,
       createdAt: jsonSerialization['createdAt'] == null
           ? null
@@ -88,6 +97,15 @@ abstract class UserProfile
 
   String? region;
 
+  /// Which of the pre-made avatars (0-23) the player picked; null until they choose.
+  int? avatar;
+
+  /// The player's saved settings (keys, formation, match length...) as JSON, so a new device picks them up.
+  String? settings;
+
+  /// The player's club crest and kit as JSON.
+  String? club;
+
   /// Nation id the player supports.
   String? favouriteNation;
 
@@ -109,6 +127,9 @@ abstract class UserProfile
     String? displayName,
     String? displayNameLower,
     String? region,
+    int? avatar,
+    String? settings,
+    String? club,
     String? favouriteNation,
     DateTime? createdAt,
     DateTime? bannedUntil,
@@ -124,6 +145,9 @@ abstract class UserProfile
       'displayName': displayName,
       'displayNameLower': displayNameLower,
       if (region != null) 'region': region,
+      if (avatar != null) 'avatar': avatar,
+      if (settings != null) 'settings': settings,
+      if (club != null) 'club': club,
       if (favouriteNation != null) 'favouriteNation': favouriteNation,
       'createdAt': createdAt.toJson(),
       if (bannedUntil != null) 'bannedUntil': bannedUntil?.toJson(),
@@ -141,6 +165,9 @@ abstract class UserProfile
       'displayName': displayName,
       'displayNameLower': displayNameLower,
       if (region != null) 'region': region,
+      if (avatar != null) 'avatar': avatar,
+      if (settings != null) 'settings': settings,
+      if (club != null) 'club': club,
       if (favouriteNation != null) 'favouriteNation': favouriteNation,
       'createdAt': createdAt.toJson(),
       if (bannedUntil != null) 'bannedUntil': bannedUntil?.toJson(),
@@ -164,6 +191,9 @@ class _UserProfileImpl extends UserProfile {
     required String displayName,
     required String displayNameLower,
     String? region,
+    int? avatar,
+    String? settings,
+    String? club,
     String? favouriteNation,
     DateTime? createdAt,
     DateTime? bannedUntil,
@@ -175,6 +205,9 @@ class _UserProfileImpl extends UserProfile {
          displayName: displayName,
          displayNameLower: displayNameLower,
          region: region,
+         avatar: avatar,
+         settings: settings,
+         club: club,
          favouriteNation: favouriteNation,
          createdAt: createdAt,
          bannedUntil: bannedUntil,
@@ -192,6 +225,9 @@ class _UserProfileImpl extends UserProfile {
     String? displayName,
     String? displayNameLower,
     Object? region = _Undefined,
+    Object? avatar = _Undefined,
+    Object? settings = _Undefined,
+    Object? club = _Undefined,
     Object? favouriteNation = _Undefined,
     DateTime? createdAt,
     Object? bannedUntil = _Undefined,
@@ -204,6 +240,9 @@ class _UserProfileImpl extends UserProfile {
       displayName: displayName ?? this.displayName,
       displayNameLower: displayNameLower ?? this.displayNameLower,
       region: region is String? ? region : this.region,
+      avatar: avatar is int? ? avatar : this.avatar,
+      settings: settings is String? ? settings : this.settings,
+      club: club is String? ? club : this.club,
       favouriteNation: favouriteNation is String?
           ? favouriteNation
           : this.favouriteNation,

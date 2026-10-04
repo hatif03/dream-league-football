@@ -20,6 +20,8 @@ abstract class LobbyView
   LobbyView._({
     required this.lobby,
     required this.hostName,
+    this.hostAvatar,
+    this.guestAvatar,
     this.guestName,
     required this.youAreHost,
   });
@@ -27,6 +29,8 @@ abstract class LobbyView
   factory LobbyView({
     required _iuq5c2ya.Lobby lobby,
     required String hostName,
+    int? hostAvatar,
+    int? guestAvatar,
     String? guestName,
     required bool youAreHost,
   }) = _LobbyViewImpl;
@@ -37,6 +41,8 @@ abstract class LobbyView
         jsonSerialization['lobby'],
       ),
       hostName: jsonSerialization['hostName'] as String,
+      hostAvatar: jsonSerialization['hostAvatar'] as int?,
+      guestAvatar: jsonSerialization['guestAvatar'] as int?,
       guestName: jsonSerialization['guestName'] as String?,
       youAreHost: _is.BoolJsonExtension.fromJson(
         jsonSerialization['youAreHost'],
@@ -48,6 +54,10 @@ abstract class LobbyView
 
   String hostName;
 
+  int? hostAvatar;
+
+  int? guestAvatar;
+
   String? guestName;
 
   bool youAreHost;
@@ -58,6 +68,8 @@ abstract class LobbyView
   LobbyView copyWith({
     _iuq5c2ya.Lobby? lobby,
     String? hostName,
+    int? hostAvatar,
+    int? guestAvatar,
     String? guestName,
     bool? youAreHost,
   });
@@ -67,6 +79,8 @@ abstract class LobbyView
       '__className__': 'LobbyView',
       'lobby': lobby.toJson(),
       'hostName': hostName,
+      if (hostAvatar != null) 'hostAvatar': hostAvatar,
+      if (guestAvatar != null) 'guestAvatar': guestAvatar,
       if (guestName != null) 'guestName': guestName,
       'youAreHost': youAreHost,
     };
@@ -78,6 +92,8 @@ abstract class LobbyView
       '__className__': 'LobbyView',
       'lobby': lobby.toJsonForProtocol(),
       'hostName': hostName,
+      if (hostAvatar != null) 'hostAvatar': hostAvatar,
+      if (guestAvatar != null) 'guestAvatar': guestAvatar,
       if (guestName != null) 'guestName': guestName,
       'youAreHost': youAreHost,
     };
@@ -95,11 +111,15 @@ class _LobbyViewImpl extends LobbyView {
   _LobbyViewImpl({
     required _iuq5c2ya.Lobby lobby,
     required String hostName,
+    int? hostAvatar,
+    int? guestAvatar,
     String? guestName,
     required bool youAreHost,
   }) : super._(
          lobby: lobby,
          hostName: hostName,
+         hostAvatar: hostAvatar,
+         guestAvatar: guestAvatar,
          guestName: guestName,
          youAreHost: youAreHost,
        );
@@ -111,12 +131,16 @@ class _LobbyViewImpl extends LobbyView {
   LobbyView copyWith({
     _iuq5c2ya.Lobby? lobby,
     String? hostName,
+    Object? hostAvatar = _Undefined,
+    Object? guestAvatar = _Undefined,
     Object? guestName = _Undefined,
     bool? youAreHost,
   }) {
     return LobbyView(
       lobby: lobby ?? this.lobby.copyWith(),
       hostName: hostName ?? this.hostName,
+      hostAvatar: hostAvatar is int? ? hostAvatar : this.hostAvatar,
+      guestAvatar: guestAvatar is int? ? guestAvatar : this.guestAvatar,
       guestName: guestName is String? ? guestName : this.guestName,
       youAreHost: youAreHost ?? this.youAreHost,
     );

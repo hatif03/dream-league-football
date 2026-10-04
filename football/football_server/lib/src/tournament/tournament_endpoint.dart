@@ -5,6 +5,7 @@ import 'package:serverpod/serverpod.dart';
 import '../auth/current_user.dart';
 import '../data/world_cup_data.dart';
 import '../generated/protocol.dart';
+import '../rankings/rankings_endpoint.dart' show invalidateLeaderboard;
 import 'group_logic.dart';
 import 'knockout.dart';
 
@@ -211,6 +212,7 @@ class TournamentEndpoint extends Endpoint {
         ..eliminatedIn = played.round
         ..finishedAt = DateTime.now().toUtc();
     } else if (played.round == 'final') {
+      invalidateLeaderboard();
       t
         ..status = 'champion'
         ..finishedAt = DateTime.now().toUtc();

@@ -21,6 +21,7 @@ import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
 import '../friend/friend_match_endpoint.dart' as _i3eu9671;
 import '../friend/lobby_endpoint.dart' as _ixxnzf3o;
 import '../profile/profile_endpoint.dart' as _i6ky944g;
+import '../rankings/rankings_endpoint.dart' as _id0yvzws;
 import '../social/chat_endpoint.dart' as _ib6swwnz;
 import '../social/friends_endpoint.dart' as _iejqgreb;
 import '../social/report_endpoint.dart' as _i5mkv7jo;
@@ -70,6 +71,12 @@ class Endpoints extends _is.EndpointDispatch {
         ..initialize(
           server,
           'profile',
+          null,
+        ),
+      'rankings': _id0yvzws.RankingsEndpoint()
+        ..initialize(
+          server,
+          'rankings',
           null,
         ),
       'chat': _ib6swwnz.ChatEndpoint()
@@ -862,6 +869,63 @@ class Endpoints extends _is.EndpointDispatch {
                     params['favouriteNation'],
                   ),
         ),
+        'setAvatar': _is.MethodConnector(
+          name: 'setAvatar',
+          params: {
+            'avatar': _is.ParameterDescription(
+              name: 'avatar',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['profile'] as _i6ky944g.ProfileEndpoint).setAvatar(
+                    session,
+                    params['avatar'],
+                  ),
+        ),
+        'saveSettings': _is.MethodConnector(
+          name: 'saveSettings',
+          params: {
+            'json': _is.ParameterDescription(
+              name: 'json',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['profile'] as _i6ky944g.ProfileEndpoint)
+                  .saveSettings(
+                    session,
+                    params['json'],
+                  ),
+        ),
+        'saveClub': _is.MethodConnector(
+          name: 'saveClub',
+          params: {
+            'json': _is.ParameterDescription(
+              name: 'json',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['profile'] as _i6ky944g.ProfileEndpoint).saveClub(
+                    session,
+                    params['json'],
+                  ),
+        ),
         'record': _is.MethodConnector(
           name: 'record',
           params: {},
@@ -881,6 +945,41 @@ class Endpoints extends _is.EndpointDispatch {
                 Map<String, dynamic> params,
               ) async => (endpoints['profile'] as _i6ky944g.ProfileEndpoint)
                   .deleteAccount(session),
+        ),
+      },
+    );
+    connectors['rankings'] = _is.EndpointConnector(
+      name: 'rankings',
+      endpoint: endpoints['rankings']!,
+      methodConnectors: {
+        'leaderboard': _is.MethodConnector(
+          name: 'leaderboard',
+          params: {
+            'limit': _is.ParameterDescription(
+              name: 'limit',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['rankings'] as _id0yvzws.RankingsEndpoint)
+                  .leaderboard(
+                    session,
+                    params['limit'],
+                  ),
+        ),
+        'achievements': _is.MethodConnector(
+          name: 'achievements',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async => (endpoints['rankings'] as _id0yvzws.RankingsEndpoint)
+                  .achievements(session),
         ),
       },
     );

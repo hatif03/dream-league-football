@@ -9,6 +9,16 @@ Future<String> displayNameOf(Session session, String? userId) async {
   return p?.displayName ?? 'Removed player';
 }
 
+/// The pre-made avatar a player picked (0-23), or null.
+Future<int?> avatarOf(Session session, String? userId) async {
+  if (userId == null) return null;
+  final p = await UserProfile.db.findFirstRow(session, where: (t) => t.userId.equals(userId));
+  return p?.avatar;
+}
+
+/// Number of pre-made avatars the web app offers.
+const avatarCount = 24;
+
 /// A player is "online" while their app keeps checking in (see FriendsEndpoint.list).
 const onlineWindow = Duration(seconds: 75);
 
@@ -16,7 +26,7 @@ Future<PersonView> personOf(Session session, String userId) async {
   final p = await UserProfile.db.findFirstRow(session, where: (t) => t.userId.equals(userId));
   final seen = p?.lastSeenAt;
   final online = seen != null && DateTime.now().toUtc().difference(seen) < onlineWindow;
-  return PersonView(userId: userId, name: p?.displayName ?? 'Removed player', online: online);
+  return PersonView(userId: userId, name: p?.displayName ?? 'Removed player', avatar: p?.avatar, online: online);
 }
 
 /// True if either player has blocked the other.

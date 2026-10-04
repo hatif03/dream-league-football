@@ -1,0 +1,14 @@
+### One row of the leaderboard.
+class: LeaderEntry
+fields:
+  rank: int
+  userId: String
+  name: String
+  avatar: int?
+  played: int
+  wins: int
+  draws: int
+  losses: int
+  ### Solo World Cups won.
+  titles: int
+  points: int

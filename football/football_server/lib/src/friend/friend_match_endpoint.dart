@@ -2,6 +2,7 @@ import 'package:serverpod/serverpod.dart';
 
 import '../auth/current_user.dart';
 import '../generated/protocol.dart';
+import '../rankings/rankings_endpoint.dart' show invalidateLeaderboard;
 import '../util/rate_limit.dart';
 import 'claims.dart';
 
@@ -170,6 +171,7 @@ class FriendMatchEndpoint extends Endpoint {
       );
       change(m);
       _settle(m);
+      if (m.status == 'finished') invalidateLeaderboard();
       return FriendMatch.db.updateRow(session, m, transaction: tx);
     });
   }

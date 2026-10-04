@@ -21,6 +21,10 @@ import 'package:football_server/src/generated/friend/signal_view.dart'
     as _ixpqk0jv;
 import 'package:football_server/src/generated/profile/user_profile.dart'
     as _ihqiwhx7;
+import 'package:football_server/src/generated/rankings/achievement_view.dart'
+    as _iyyv6ovn;
+import 'package:football_server/src/generated/rankings/leaderboard_view.dart'
+    as _iv51xp6p;
 import 'package:football_server/src/generated/social/admin_stats.dart'
     as _i282h6g3;
 import 'package:football_server/src/generated/social/chat_line.dart'
@@ -184,6 +188,8 @@ class TestEndpoints {
 
   late final _ProfileEndpoint profile;
 
+  late final _RankingsEndpoint rankings;
+
   late final _ChatEndpoint chat;
 
   late final _FriendsEndpoint friends;
@@ -225,6 +231,10 @@ class _InternalTestEndpoints extends TestEndpoints
       serializationManager,
     );
     profile = _ProfileEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    rankings = _RankingsEndpoint(
       endpoints,
       serializationManager,
     );
@@ -1418,6 +1428,99 @@ class _ProfileEndpoint {
     });
   }
 
+  _ida.Future<_ihqiwhx7.UserProfile> setAvatar(
+    _ist.TestSessionBuilder sessionBuilder,
+    int avatar,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'profile',
+            method: 'setAvatar',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'profile',
+          methodName: 'setAvatar',
+          parameters: _ist.testObjectToJson({'avatar': avatar}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ihqiwhx7.UserProfile>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ihqiwhx7.UserProfile> saveSettings(
+    _ist.TestSessionBuilder sessionBuilder,
+    String json,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'profile',
+            method: 'saveSettings',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'profile',
+          methodName: 'saveSettings',
+          parameters: _ist.testObjectToJson({'json': json}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ihqiwhx7.UserProfile>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ihqiwhx7.UserProfile> saveClub(
+    _ist.TestSessionBuilder sessionBuilder,
+    String json,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'profile',
+            method: 'saveClub',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'profile',
+          methodName: 'saveClub',
+          parameters: _ist.testObjectToJson({'json': json}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ihqiwhx7.UserProfile>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
   _ida.Future<_iy62b1ym.RecordView> record(
     _ist.TestSessionBuilder sessionBuilder,
   ) async {
@@ -1471,6 +1574,78 @@ class _ProfileEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<void>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _RankingsEndpoint {
+  _RankingsEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_iv51xp6p.LeaderboardView> leaderboard(
+    _ist.TestSessionBuilder sessionBuilder,
+    int limit,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'rankings',
+            method: 'leaderboard',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'rankings',
+          methodName: 'leaderboard',
+          parameters: _ist.testObjectToJson({'limit': limit}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_iv51xp6p.LeaderboardView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<List<_iyyv6ovn.AchievementView>> achievements(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'rankings',
+            method: 'achievements',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'rankings',
+          methodName: 'achievements',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<List<_iyyv6ovn.AchievementView>>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();

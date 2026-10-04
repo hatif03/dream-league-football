@@ -38,8 +38,14 @@ profile:
   - isNameAvailable:
   - createProfile:
   - updateProfile:
+  - setAvatar:
+  - saveSettings:
+  - saveClub:
   - record:
   - deleteAccount:
+rankings:
+  - leaderboard:
+  - achievements:
 chat:
   - send:
   - list:

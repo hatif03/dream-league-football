@@ -51,6 +51,7 @@ class FriendsEndpoint extends Endpoint {
           lobbyId: i.lobbyId,
           code: lobby.code,
           fromName: await displayNameOf(session, i.fromUserId),
+          fromAvatar: await avatarOf(session, i.fromUserId),
           createdAt: i.createdAt,
         ),
       );

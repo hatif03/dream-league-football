@@ -19,6 +19,7 @@ abstract class InviteView
     required this.lobbyId,
     required this.code,
     required this.fromName,
+    this.fromAvatar,
     required this.createdAt,
   });
 
@@ -26,6 +27,7 @@ abstract class InviteView
     required _isc.UuidValue lobbyId,
     required String code,
     required String fromName,
+    int? fromAvatar,
     required DateTime createdAt,
   }) = _InviteViewImpl;
 
@@ -36,6 +38,7 @@ abstract class InviteView
       ),
       code: jsonSerialization['code'] as String,
       fromName: jsonSerialization['fromName'] as String,
+      fromAvatar: jsonSerialization['fromAvatar'] as int?,
       createdAt: _isc.DateTimeJsonExtension.fromJson(
         jsonSerialization['createdAt'],
       ),
@@ -48,6 +51,8 @@ abstract class InviteView
 
   String fromName;
 
+  int? fromAvatar;
+
   DateTime createdAt;
 
   /// Returns a shallow copy of this [InviteView]
@@ -57,6 +62,7 @@ abstract class InviteView
     _isc.UuidValue? lobbyId,
     String? code,
     String? fromName,
+    int? fromAvatar,
     DateTime? createdAt,
   });
   @override
@@ -66,6 +72,7 @@ abstract class InviteView
       'lobbyId': lobbyId.toJson(),
       'code': code,
       'fromName': fromName,
+      if (fromAvatar != null) 'fromAvatar': fromAvatar,
       'createdAt': createdAt.toJson(),
     };
   }
@@ -77,6 +84,7 @@ abstract class InviteView
       'lobbyId': lobbyId.toJson(),
       'code': code,
       'fromName': fromName,
+      if (fromAvatar != null) 'fromAvatar': fromAvatar,
       'createdAt': createdAt.toJson(),
     };
   }
@@ -87,16 +95,20 @@ abstract class InviteView
   }
 }
 
+class _Undefined {}
+
 class _InviteViewImpl extends InviteView {
   _InviteViewImpl({
     required _isc.UuidValue lobbyId,
     required String code,
     required String fromName,
+    int? fromAvatar,
     required DateTime createdAt,
   }) : super._(
          lobbyId: lobbyId,
          code: code,
          fromName: fromName,
+         fromAvatar: fromAvatar,
          createdAt: createdAt,
        );
 
@@ -108,12 +120,14 @@ class _InviteViewImpl extends InviteView {
     _isc.UuidValue? lobbyId,
     String? code,
     String? fromName,
+    Object? fromAvatar = _Undefined,
     DateTime? createdAt,
   }) {
     return InviteView(
       lobbyId: lobbyId ?? this.lobbyId,
       code: code ?? this.code,
       fromName: fromName ?? this.fromName,
+      fromAvatar: fromAvatar is int? ? fromAvatar : this.fromAvatar,
       createdAt: createdAt ?? this.createdAt,
     );
   }

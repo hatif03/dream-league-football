@@ -1,0 +1,7 @@
+class: LeaderboardView
+fields:
+  top: List<LeaderEntry>
+  ### The caller's own row (with their true rank), or null if they have not played yet.
+  you: LeaderEntry?
+  ### How many players are ranked.
+  total: int

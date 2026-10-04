@@ -4,4 +4,5 @@ fields:
   lobbyId: UuidValue
   code: String
   fromName: String
+  fromAvatar: int?
   createdAt: DateTime

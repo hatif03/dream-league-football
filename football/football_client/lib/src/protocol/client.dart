@@ -19,6 +19,10 @@ import 'package:football_client/src/protocol/friend/signal_view.dart'
     as _i54q09el;
 import 'package:football_client/src/protocol/profile/user_profile.dart'
     as _ihl7iimi;
+import 'package:football_client/src/protocol/rankings/achievement_view.dart'
+    as _iqx1bsph;
+import 'package:football_client/src/protocol/rankings/leaderboard_view.dart'
+    as _ib83d9xt;
 import 'package:football_client/src/protocol/social/admin_stats.dart'
     as _id6gu71f;
 import 'package:football_client/src/protocol/social/chat_line.dart'
@@ -568,6 +572,30 @@ class EndpointProfile extends _isc.EndpointRef {
     },
   );
 
+  /// Picks one of the pre-made avatars (0 to 23).
+  _ida.Future<_ihl7iimi.UserProfile> setAvatar(int avatar) =>
+      caller.callServerEndpoint<_ihl7iimi.UserProfile>(
+        'profile',
+        'setAvatar',
+        {'avatar': avatar},
+      );
+
+  /// Saves the player's settings (a JSON object, at most 8 KB) so they follow them to other devices.
+  _ida.Future<_ihl7iimi.UserProfile> saveSettings(String json) =>
+      caller.callServerEndpoint<_ihl7iimi.UserProfile>(
+        'profile',
+        'saveSettings',
+        {'json': json},
+      );
+
+  /// Saves the player's club crest and kit (a JSON object, at most 2 KB).
+  _ida.Future<_ihl7iimi.UserProfile> saveClub(String json) =>
+      caller.callServerEndpoint<_ihl7iimi.UserProfile>(
+        'profile',
+        'saveClub',
+        {'json': json},
+      );
+
   /// Friend-match record: wins, draws, losses, abandoned matches, and per-opponent results.
   /// A draw is a draw. An abandoned or void match counts for nobody.
   _ida.Future<_imm1597n.RecordView> record() =>
@@ -584,6 +612,31 @@ class EndpointProfile extends _isc.EndpointRef {
     'deleteAccount',
     {},
   );
+}
+
+/// Rankings and achievements, both derived from the matches and World Cup runs already stored.
+/// {@category Endpoint}
+class EndpointRankings extends _isc.EndpointRef {
+  EndpointRankings(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'rankings';
+
+  /// The top [limit] players (at most 50) and the caller's own row.
+  _ida.Future<_ib83d9xt.LeaderboardView> leaderboard(int limit) =>
+      caller.callServerEndpoint<_ib83d9xt.LeaderboardView>(
+        'rankings',
+        'leaderboard',
+        {'limit': limit},
+      );
+
+  /// Every achievement with the caller's progress.
+  _ida.Future<List<_iqx1bsph.AchievementView>> achievements() =>
+      caller.callServerEndpoint<List<_iqx1bsph.AchievementView>>(
+        'rankings',
+        'achievements',
+        {},
+      );
 }
 
 /// {@category Endpoint}
@@ -819,6 +872,7 @@ class Client extends _isc.ServerpodClientShared {
     friendMatch = EndpointFriendMatch(this);
     lobby = EndpointLobby(this);
     profile = EndpointProfile(this);
+    rankings = EndpointRankings(this);
     chat = EndpointChat(this);
     friends = EndpointFriends(this);
     report = EndpointReport(this);
@@ -840,6 +894,8 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointProfile profile;
 
+  late final EndpointRankings rankings;
+
   late final EndpointChat chat;
 
   late final EndpointFriends friends;
@@ -859,6 +915,7 @@ class Client extends _isc.ServerpodClientShared {
     'friendMatch': friendMatch,
     'lobby': lobby,
     'profile': profile,
+    'rankings': rankings,
     'chat': chat,
     'friends': friends,
     'report': report,

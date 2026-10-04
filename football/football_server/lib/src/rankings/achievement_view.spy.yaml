@@ -1,0 +1,10 @@
+### One achievement, as the signed-in player stands on it.
+class: AchievementView
+fields:
+  id: String
+  title: String
+  description: String
+  done: bool
+  ### How far along the player is (never above target).
+  progress: int
+  target: int

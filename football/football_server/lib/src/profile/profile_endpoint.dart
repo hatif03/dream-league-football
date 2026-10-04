@@ -1,9 +1,11 @@
-﻿import 'package:serverpod/serverpod.dart';
+import 'dart:convert';
+import 'package:serverpod/serverpod.dart';
 import 'package:serverpod_auth_idp_server/core.dart' show AuthServices;
 
 import '../auth/current_user.dart';
 import '../data/world_cup_data.dart';
 import '../generated/protocol.dart';
+import '../social/social_util.dart';
 
 final _nameChars = RegExp(r'^[A-Za-z0-9_\-]{3,16}$');
 const _reserved = {'admin', 'moderator', 'system', 'removed', 'cpu', 'fifa'};
@@ -72,6 +74,36 @@ class ProfileEndpoint extends Endpoint {
       session,
       profile.copyWith(region: region, favouriteNation: favouriteNation),
     );
+  }
+
+  /// Picks one of the pre-made avatars (0 to 23).
+  Future<UserProfile> setAvatar(Session session, int avatar) async {
+    final profile = await requireProfile(session);
+    if (avatar < 0 || avatar >= avatarCount) throw GameException(message: 'Unknown avatar.');
+    return UserProfile.db.updateRow(session, profile.copyWith(avatar: avatar));
+  }
+
+  /// Saves the player's settings (a JSON object, at most 8 KB) so they follow them to other devices.
+  Future<UserProfile> saveSettings(Session session, String json) async {
+    final profile = await requireProfile(session);
+    _checkJsonObject(json, 8192, 'Settings');
+    return UserProfile.db.updateRow(session, profile.copyWith(settings: json));
+  }
+
+  /// Saves the player's club crest and kit (a JSON object, at most 2 KB).
+  Future<UserProfile> saveClub(Session session, String json) async {
+    final profile = await requireProfile(session);
+    _checkJsonObject(json, 2048, 'Club');
+    return UserProfile.db.updateRow(session, profile.copyWith(club: json));
+  }
+
+  void _checkJsonObject(String json, int maxLen, String what) {
+    if (json.length > maxLen) throw GameException(message: '$what data is too large.');
+    try {
+      if (jsonDecode(json) is! Map) throw const FormatException();
+    } catch (_) {
+      throw GameException(message: '$what data is not valid.');
+    }
   }
 
   /// Friend-match record: wins, draws, losses, abandoned matches, and per-opponent results.
