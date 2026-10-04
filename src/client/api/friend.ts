@@ -19,7 +19,9 @@ export interface Lobby {
 export interface LobbyView {
   lobby: Lobby;
   hostName: string;
+  hostAvatar?: number | null;
   guestName?: string | null;
+  guestAvatar?: number | null;
   youAreHost: boolean;
 }
 

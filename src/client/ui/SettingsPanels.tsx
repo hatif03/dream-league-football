@@ -16,7 +16,7 @@ import {
 } from '@/client/game/inputDevices';
 import { Btn } from './controls';
 import { sfx } from './sfx';
-import { useSettings, type Difficulty } from './settings';
+import { MATCH_LENGTHS, useSettings, type Difficulty } from './settings';
 
 export type SettingsTab = 'keyboard' | 'controller' | 'touch' | 'gameplay' | 'audio';
 const LABELS: Record<SettingsTab, string> = { keyboard: 'Keyboard', controller: 'Controller', touch: 'Touch', gameplay: 'Gameplay', audio: 'Audio' };
@@ -180,7 +180,7 @@ function Touch() {
 }
 
 function Gameplay() {
-  const { difficulty, setDifficulty } = useSettings();
+  const { difficulty, setDifficulty, matchSecs, setMatchSecs } = useSettings();
   const info: Record<Difficulty, string> = {
     easy: 'The CPU is a touch slower and less accurate. Good for learning.',
     normal: 'The CPU plays to its ratings.',
@@ -195,6 +195,14 @@ function Gameplay() {
         ))}
       </div>
       <p className="mt-3 font-body text-sm text-mist-300">{info[difficulty]} Applies to World Cup matches and practice. Matches against friends are not affected.</p>
+
+      <h3 className="t-label mb-2 mt-6">Match length (World Cup)</h3>
+      <div className="grid max-w-md grid-cols-3 gap-2" role="radiogroup" aria-label="Match length">
+        {MATCH_LENGTHS.map((s) => (
+          <button key={s} role="radio" aria-checked={matchSecs === s} onClick={() => setMatchSecs(s)} className={`rounded py-3 font-display text-lg font-bold uppercase tracking-wider ${matchSecs === s ? 'bg-neon-400 text-ink-950' : 'bg-white/10 text-mist-200 hover:bg-white/20'}`}>{s / 60} min</button>
+        ))}
+      </div>
+      <p className="mt-3 font-body text-sm text-mist-300">Real minutes for the full 90. There is a half-time break in the middle.</p>
     </>
   );
 }

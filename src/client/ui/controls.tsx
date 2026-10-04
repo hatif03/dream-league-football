@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { AvatarArt } from './avatars';
 import { Link, type LinkProps } from 'react-router-dom';
 
 type Variant = 'primary' | 'ghost' | 'danger' | 'hot';
@@ -83,11 +84,12 @@ export function Badge({ tone = 'neon', children }: { tone?: 'neon' | 'hot' | 'go
 }
 
 /** Initials in a coloured circle, with an optional online dot. */
-export function Avatar({ name, online, size = 36 }: { name: string; online?: boolean; size?: number }) {
+export function Avatar({ name, online, size = 36, avatar }: { name: string; online?: boolean; size?: number; avatar?: number | null }) {
   const hue = [...name].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 360, 7);
+  const picked = typeof avatar === 'number';
   return (
-    <span className="relative inline-flex shrink-0 items-center justify-center rounded-full font-display text-sm font-bold text-white ring-2 ring-white/30" style={{ width: size, height: size, background: `hsl(${hue} 70% 42%)` }} aria-hidden="true">
-      {name.slice(0, 2).toUpperCase()}
+    <span className="relative inline-flex shrink-0 items-center justify-center rounded-full font-display text-sm font-bold text-white ring-2 ring-white/30" style={{ width: size, height: size, background: picked ? undefined : `hsl(${hue} 70% 42%)` }} aria-hidden="true">
+      {picked ? <AvatarArt id={avatar} size={size} /> : name.slice(0, 2).toUpperCase()}
       {online !== undefined && (
         <span className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-ink-900 ${online ? 'bg-win' : 'bg-mist-500'}`} />
       )}

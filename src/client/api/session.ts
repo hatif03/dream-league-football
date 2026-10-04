@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { call, callPublic, getAuth, onAuthChange, setAuth, storeAuthSuccess } from './http';
+import { adoptAccountSettings } from './settingsSync';
 
 export interface UserProfile {
   id: string;
@@ -7,6 +8,12 @@ export interface UserProfile {
   displayName: string;
   region?: string | null;
   favouriteNation?: string | null;
+  /** One of the 24 pre-made avatars, or null until chosen. */
+  avatar?: number | null;
+  /** The player's saved settings as JSON (see settingsSync). */
+  settings?: string | null;
+  /** The player's club crest and kit as JSON. */
+  club?: string | null;
   termsAcceptedAt?: string | null;
 }
 
@@ -25,11 +32,17 @@ function set(next: SessionState) {
   subs.forEach((s) => s());
 }
 
+/** Replace the signed-in profile with a fresh copy the server just returned. */
+export function applyProfile(p: UserProfile) {
+  set({ status: 'in', profile: p });
+}
+
 export async function loadProfile() {
   if (!getAuth()) return set({ status: 'out' });
   try {
     const p = await call<UserProfile | null>('profile/me');
     set(p ? { status: 'in', profile: p } : { status: 'needsProfile' });
+    if (p) adoptAccountSettings(p.userId, p.settings);
   } catch {
     // A rejected session (tokens already cleared) or an unreachable server both
     // land on the signed-out screen; stored tokens survive a network failure.

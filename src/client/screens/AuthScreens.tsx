@@ -15,6 +15,7 @@ import {
 import { call } from '@/client/api/http';
 import { TEAMS, nationId } from '@/client/game/teams';
 import { useHints } from '@/client/ui/hints';
+import { AVATAR_COUNT, AvatarPicker } from '@/client/ui/avatars';
 
 const EMAIL_KEY = 'wc2026.lastEmail';
 const rememberedEmail = () => {
@@ -282,6 +283,7 @@ export function WelcomeScreen() {
   const [name, setName] = useState('');
   const [fav, setFav] = useState('');
   const [terms, setTerms] = useState(false);
+  const [avatar, setAvatar] = useState(() => Math.floor(Math.random() * AVATAR_COUNT));
   const [avail, setAvail] = useState<'idle' | 'checking' | 'ok' | 'taken' | 'bad'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -314,6 +316,7 @@ export function WelcomeScreen() {
     try {
       await createProfile(name.trim());
       if (fav) await call('profile/updateProfile', { region: null, favouriteNation: fav });
+      await call('profile/setAvatar', { avatar }).catch(() => {});
       navigate('/', { replace: true });
     } catch (err) {
       setError(errText(err));
@@ -341,6 +344,10 @@ export function WelcomeScreen() {
             </select>
           </div>
         </Field>
+        <div className="mb-4">
+          <span className="t-label mb-1 block">Pick an avatar</span>
+          <AvatarPicker value={avatar} onPick={setAvatar} />
+        </div>
         <label className="mb-5 flex items-start gap-3 font-body text-sm text-mist-200">
           <input type="checkbox" className="mt-1 h-5 w-5 accent-cyan-400" checked={terms} onChange={(e) => setTerms(e.target.checked)} required />
           <span>

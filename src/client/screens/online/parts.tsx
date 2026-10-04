@@ -90,7 +90,7 @@ export function FriendsList({
 
       {friends?.incoming.map((p) => (
         <div key={p.userId} className="mb-2 flex items-center gap-3 rounded bg-hot-500/15 p-2">
-          <Avatar name={p.name} />
+          <Avatar name={p.name} avatar={p.avatar} />
           <span className="flex-1 font-body text-sm text-white"><b>{p.name}</b> wants to be friends</span>
           <Btn size="sm" variant="primary" onClick={async () => { const { acceptFriend } = await import('@/client/api/social'); set(await acceptFriend(p.userId)); }}>Accept</Btn>
           <Btn size="sm" onClick={async () => set(await removeFriend(p.userId))}>No</Btn>
@@ -105,7 +105,7 @@ export function FriendsList({
         <ul className={`space-y-1.5 ${compact ? 'max-h-64 overflow-y-auto pr-1' : ''}`}>
           {list.map((p) => (
             <li key={p.userId} className="flex items-center gap-3 rounded bg-white/5 px-3 py-2">
-              <Avatar name={p.name} online={p.online} />
+              <Avatar name={p.name} avatar={p.avatar} online={p.online} />
               <div className="min-w-0 flex-1">
                 <div className="truncate font-display text-lg font-bold uppercase leading-tight text-white">{p.name}</div>
                 <div className={`font-body text-xs ${p.online ? 'text-win' : 'text-mist-500'}`}>{p.online ? 'Online' : 'Offline'}</div>

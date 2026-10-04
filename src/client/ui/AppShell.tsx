@@ -87,7 +87,7 @@ export function AppShell() {
           {profile && <NotificationBell />}
           {profile ? (
             <NavLink to="/profile" className="flex items-center gap-2 rounded-full bg-white/10 py-1 pl-1 pr-4 ring-1 ring-white/20 hover:bg-white/20" aria-label="Your profile">
-              <Avatar name={profile.displayName} online size={32} />
+              <Avatar name={profile.displayName} avatar={profile.avatar} online size={32} />
               <span className="hidden font-display text-base font-bold uppercase tracking-wide text-white sm:inline">{profile.displayName}</span>
             </NavLink>
           ) : session.status === 'loading' ? (

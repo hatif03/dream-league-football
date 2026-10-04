@@ -3,6 +3,7 @@ import { call, callPublic } from './http';
 export interface Person {
   userId: string;
   name: string;
+  avatar?: number | null;
   /** Checked in within the last minute or so. */
   online: boolean;
 }
@@ -11,6 +12,7 @@ export interface Invite {
   lobbyId: string;
   code: string;
   fromName: string;
+  fromAvatar?: number | null;
   createdAt: string;
 }
 
