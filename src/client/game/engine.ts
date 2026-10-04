@@ -271,6 +271,14 @@ export class PitchKickGame {
   private inExtraTime = false;
   /** Real seconds at which play ends: 180, or 240 once extra time starts. */
   private endSecs = MATCH_REAL_SECS;
+  /** Real seconds a 90-minute match lasts (the player's match-length setting; 180 by default). */
+  private matchSecs = MATCH_REAL_SECS;
+  /** The second half has started (half-time is taken once, at 45 displayed minutes). */
+  private halfTimeDone = false;
+  /** Counters the tutorial reads (see tutorialProbe). */
+  private actionCounts: Record<string, number> = {};
+  private movedPx = 0;
+  private sprintSecs = 0;
 
   /** Selected nations driving the match (lineups, names, numbers, kits). */
   readonly homeTeam: TeamData;
@@ -286,7 +294,7 @@ export class PitchKickGame {
     listener: StateListener,
     homeTeam: TeamData,
     awayTeam: TeamData,
-    opts: { practice?: boolean; bindings?: KeyBindings; guestSeat?: boolean; knockout?: boolean; difficulty?: 'easy' | 'normal' | 'hard' } = {},
+    opts: { practice?: boolean; bindings?: KeyBindings; guestSeat?: boolean; knockout?: boolean; difficulty?: 'easy' | 'normal' | 'hard'; matchSecs?: number } = {},
   ) {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D context unavailable');
@@ -296,6 +304,7 @@ export class PitchKickGame {
     this.awayTeam = awayTeam;
     this.practice = opts.practice ?? false;
     this.knockout = opts.knockout ?? false;
+    if (opts.matchSecs && opts.matchSecs >= 60 && opts.matchSecs <= 900) this.matchSecs = this.endSecs = opts.matchSecs;
     this.cpuSkill = opts.difficulty === 'easy' ? 0.88 : opts.difficulty === 'hard' ? 1.1 : 1;
     if (opts.bindings) this.setBindings(opts.bindings);
 
@@ -408,6 +417,18 @@ export class PitchKickGame {
     }
   }
 
+  /** How far the player has run, sprinted and how many of each kick they made: what the tutorial checks. */
+  tutorialProbe() {
+    return { moved: this.movedPx, sprint: this.sprintSecs, kicks: { ...this.actionCounts } };
+  }
+
+  private countProgress(dt: number) {
+    const p = this.controlled;
+    const sp = Math.hypot(p.vx, p.vy);
+    this.movedPx += sp * dt;
+    if (sp > 40 && this.keys.has('KeyE')) this.sprintSecs += dt;
+  }
+
   /** Draw one frame without running the simulation (the pre-match backdrop). */
   previewFrame() {
     this.updateCamera(1);
@@ -417,14 +438,37 @@ export class PitchKickGame {
   /** Press or release a canonical key from a non-keyboard device (controller, touch). */
   pressKey(code: string) {
     if (this.paused || this.inputSuspended) return;
-    if (ACTION_KEYS.has(code) && !this.keys.has(code)) this.justPressed.push(code);
-    this.keys.add(code);
+    this.later(() => {
+      if (ACTION_KEYS.has(code) && !this.keys.has(code)) this.justPressed.push(code);
+      this.keys.add(code);
+    });
   }
 
   releaseKey(code: string) {
     if (this.paused || this.inputSuspended) return;
-    if (KICK_KEYS.has(code) && this.keys.has(code)) this.justReleased.push(code);
-    this.keys.delete(code);
+    this.later(() => {
+      if (KICK_KEYS.has(code) && this.keys.has(code)) this.justReleased.push(code);
+      this.keys.delete(code);
+    });
+  }
+
+  /**
+   * Online fairness: the host's key presses take effect immediately while the guest's cross the network
+   * first. The host's own input is therefore held back by the guest's input latency (half the round trip),
+   * so both players' presses reach the shared simulation equally late. 0 everywhere except as the host of a
+   * friend match. Order of presses and releases is always preserved.
+   */
+  setInputDelay(ms: number) {
+    this.hostInputDelayMs = Math.max(0, Math.min(100, ms));
+  }
+  private hostInputDelayMs = 0;
+  private inputDue = 0;
+  private later(fn: () => void) {
+    const now = performance.now();
+    if (this.hostInputDelayMs <= 0 && this.inputDue <= now) return fn();
+    const due = Math.max(now + this.hostInputDelayMs, this.inputDue);
+    this.inputDue = due;
+    window.setTimeout(fn, due - now);
   }
 
   /** Apply user key bindings. Builds a physical→canonical remap so the rest of
@@ -822,7 +866,7 @@ export class PitchKickGame {
       score: [this.homeScore, this.awayScore],
       clock: Math.min(
         CLOCK_MAX_SECS,
-        Math.floor((this.elapsed / MATCH_REAL_SECS) * MATCH_DISPLAY_SECS),
+        Math.floor((this.elapsed / this.matchSecs) * MATCH_DISPLAY_SECS),
       ),
       msg: this.message,
       poss: this.owner ? (this.owner.team === 'home' ? 1 : 2) : 0,
@@ -845,15 +889,20 @@ export class PitchKickGame {
     if (this.paused || this.inputSuspended) return;
     const code = this.keyRemap.get(e.code) ?? e.code;
     if (MOVE_KEYS.has(code) || ACTION_KEYS.has(code)) e.preventDefault();
-    if (!e.repeat && ACTION_KEYS.has(code)) this.justPressed.push(code);
-    this.keys.add(code);
+    const repeat = e.repeat;
+    this.later(() => {
+      if (!repeat && ACTION_KEYS.has(code)) this.justPressed.push(code);
+      this.keys.add(code);
+    });
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
     if (this.paused || this.inputSuspended) return;
     const code = this.keyRemap.get(e.code) ?? e.code;
-    if (KICK_KEYS.has(code)) this.justReleased.push(code);
-    this.keys.delete(code);
+    this.later(() => {
+      if (KICK_KEYS.has(code)) this.justReleased.push(code);
+      this.keys.delete(code);
+    });
   };
 
   // ---- helpers ------------------------------------------------------------
@@ -1000,7 +1049,7 @@ export class PitchKickGame {
       awayScore: this.awayScore,
       clock: Math.min(
         CLOCK_MAX_SECS,
-        Math.floor((this.elapsed / MATCH_REAL_SECS) * MATCH_DISPLAY_SECS),
+        Math.floor((this.elapsed / this.matchSecs) * MATCH_DISPLAY_SECS),
       ),
       message: this.message,
       possession: this.owner ? this.owner.team : 'none',
@@ -1216,12 +1265,20 @@ export class PitchKickGame {
 
     if (!this.practice && this.elapsed < this.endSecs) {
       this.elapsed += dt;
+      if (!this.halfTimeDone && this.elapsed >= this.matchSecs / 2 && this.elapsed < this.matchSecs) {
+        // Half-time: back to the kick-off spots, and the other side kicks off the second half.
+        this.halfTimeDone = true;
+        this.resetKickoff('away');
+        this.setMessage('HALF TIME', 2.5);
+        this.freeze = 2.5;
+        return;
+      }
       if (this.elapsed >= this.endSecs) {
         this.elapsed = this.endSecs;
         if (this.knockout && !this.inExtraTime && this.homeScore === this.awayScore) {
           // Level after 90 minutes in a knockout game: extra time, with a fresh kickoff.
           this.inExtraTime = true;
-          this.endSecs += EXTRA_TIME_REAL_SECS;
+          this.endSecs += EXTRA_TIME_REAL_SECS * (this.matchSecs / MATCH_REAL_SECS);
           this.resetKickoff('away');
           this.setMessage('EXTRA TIME', 2.5);
           this.freeze = 2.5;
@@ -1250,6 +1307,7 @@ export class PitchKickGame {
     this.updateSwitchHint();
     this.handleSwitchKey();
     this.updateControlled(dt);
+    this.countProgress(dt);
     this.updateHomeTeammates(dt);
     if (this.guest) this.runGuestSeat(dt);
     else this.updateAwayTeam(dt);
@@ -1728,6 +1786,7 @@ export class PitchKickGame {
   /** @param charge 0..1 power gauge from how long the key was held. */
   private doHomeKick(code: string, charge: number, lofted = false) {
     const kicker = this.controlled;
+    this.actionCounts[code] = (this.actionCounts[code] ?? 0) + 1;
 
     // A throw-in is taken with the HANDS — any kick key releases a hand throw
     // (not a foot kick / shot), aimed at the held direction's teammate.

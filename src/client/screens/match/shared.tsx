@@ -4,6 +4,7 @@ import { CANVAS_H, CANVAS_W } from '@/client/game/constants';
 import { codeLabel } from '@/client/game/keybindings';
 import { PAD_ACTIONS, padLabel, useLastDevice } from '@/client/game/inputDevices';
 import { nationId, type TeamData } from '@/client/game/teams';
+import { FORMATIONS } from '@/client/game/teams/formations';
 import type { HudState } from '@/client/game/types';
 import { Btn } from '@/client/ui/controls';
 import { Flag } from '@/client/ui/Flag';
@@ -107,7 +108,7 @@ export function PauseMenu({ friend, onResume, onQuit, onRestart }: { friend?: bo
 }
 
 /** Before kickoff: both teams, and the controls for whatever the player is using. */
-export function IntroCard({ home, away, label, sub, onStart, onBack }: { home: TeamData; away: TeamData; label: string; sub?: string; onStart: () => void; onBack: () => void }) {
+export function IntroCard({ home, away, label, sub, onStart, onBack, children }: { home: TeamData; away: TeamData; label: string; sub?: string; onStart: () => void; onBack: () => void; children?: ReactNode }) {
   const { bindings, pad } = useSettings();
   const device = useLastDevice();
   const kb: [string, string][] = [
@@ -134,6 +135,7 @@ export function IntroCard({ home, away, label, sub, onStart, onBack }: { home: T
           <span className="t-display text-5xl text-mist-500 md:text-8xl">VS</span>
           <TeamSide team={away} awayKit />
         </div>
+        {children}
         <div className="glass mx-auto mt-5 max-w-2xl p-4 [@media(max-height:520px)]:hidden">
           <h2 className="t-label mb-2 text-center">{device === 'touch' ? 'Touch controls' : device === 'controller' ? 'Controller' : 'Keyboard'}</h2>
           {device === 'touch' ? (
@@ -153,6 +155,32 @@ export function IntroCard({ home, away, label, sub, onStart, onBack }: { home: T
         <div className="mt-5 flex items-center justify-center gap-3 [@media(max-height:520px)]:mt-3">
           <Btn data-back onClick={onBack}>Back</Btn>
           <Btn variant="primary" size="lg" onClick={onStart} autoFocus data-autofocus>▶ Kick off</Btn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Choose how your team lines up. `value` null means the team's own formation. */
+export function FormationPicker({ team, value, onChange }: { team: TeamData; value: string | null; onChange: (id: string | null) => void }) {
+  const active = value ?? FORMATIONS.find((f) => f.label === team.formation)?.id ?? null;
+  const pos = FORMATIONS.find((f) => f.id === active)?.pos ?? team.players.map((p) => p.pos);
+  const chip = (on: boolean) => `rounded px-3 py-1.5 font-display text-sm font-bold uppercase tracking-wider ${on ? 'bg-neon-400 text-ink-950' : 'bg-white/10 text-mist-200 hover:bg-white/20'}`;
+  return (
+    <div className="glass mx-auto mt-4 flex max-w-2xl items-center gap-4 p-3">
+      <svg viewBox="0 0 100 64" className="hidden h-20 w-32 shrink-0 rounded desk:block" aria-hidden="true">
+        <rect width="100" height="64" rx="3" fill="#1c7a3a" />
+        <path d="M50 0v64M0 14h12v36H0M100 14H88v36h12" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth=".8" />
+        <circle cx="50" cy="32" r="8" fill="none" stroke="rgba(255,255,255,.55)" strokeWidth=".8" />
+        {pos.map((p, i) => <circle key={i} cx={p.x * 100} cy={p.y * 64} r="2.8" fill={i === 0 ? '#ffd23a' : team.color} stroke="#fff" strokeWidth=".7" />)}
+      </svg>
+      <div className="min-w-0 flex-1">
+        <div className="t-label mb-1.5">Your formation · {FORMATIONS.find((f) => f.id === active)?.label ?? team.formation}</div>
+        <div role="radiogroup" aria-label="Formation" className="flex flex-wrap gap-1.5">
+          <button role="radio" aria-checked={value === null} onClick={() => onChange(null)} className={chip(value === null)}>Default</button>
+          {FORMATIONS.map((f) => (
+            <button key={f.id} role="radio" aria-checked={value === f.id} onClick={() => onChange(f.id)} className={chip(value === f.id)}>{f.label}</button>
+          ))}
         </div>
       </div>
     </div>

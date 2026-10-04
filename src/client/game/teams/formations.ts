@@ -2,7 +2,7 @@
 // RIGHT). Index 0 = GK, 1–4 = back line, then midfield, then attack. Real
 // squads reference one of these so each country file only carries names,
 // numbers and kit colours.
-import type { Vec } from './types';
+import type { TeamData, Vec } from './types';
 
 // 4-3-3: [GK, RB, CB, CB, LB, DM, CM, CM, RW, ST, LW]
 export const F_433: Vec[] = [
@@ -78,3 +78,38 @@ export const F_343: Vec[] = [
   { x: 0.57, y: 0.5 },
   { x: 0.52, y: 0.8 },
 ];
+
+/** The formations a player can pick before a match. Positions keep each shirt on the same slot. */
+export const FORMATIONS: { id: string; label: string; pos: Vec[] }[] = [
+  { id: '433', label: '4-3-3', pos: F_433 },
+  { id: '4231', label: '4-2-3-1', pos: F_4231 },
+  { id: '442', label: '4-4-2', pos: F_442 },
+  { id: '352', label: '3-5-2', pos: F_352 },
+  { id: '343', label: '3-4-3', pos: F_343 },
+];
+
+/** The same team lined up in another formation (a team's own default if the id is unknown). */
+export function applyFormation(team: TeamData, id: string | null): TeamData {
+  const f = FORMATIONS.find((x) => x.id === id);
+  if (!f) return team;
+  return { ...team, formation: f.label, players: team.players.map((p, i) => ({ ...p, pos: f.pos[i] ?? p.pos })) };
+}
+
+const FORMATION_KEY = 'wc2026.formation';
+export function loadFormation(): string | null {
+  try {
+    const v = localStorage.getItem(FORMATION_KEY);
+    return FORMATIONS.some((f) => f.id === v) ? v : null;
+  } catch {
+    return null;
+  }
+}
+export function saveFormation(id: string | null) {
+  try {
+    if (id) localStorage.setItem(FORMATION_KEY, id);
+    else localStorage.removeItem(FORMATION_KEY);
+    window.dispatchEvent(new Event('wc2026:settings'));
+  } catch {
+    /* storage unavailable */
+  }
+}
