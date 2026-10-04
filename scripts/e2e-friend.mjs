@@ -67,7 +67,8 @@ await host.page.getByRole('button', { name: 'Show QR code' }).click();
 await host.page.getByAltText(/QR code/).waitFor();
 
 if (invite) {
-  await guest.page.goto(`${APP}/`);
+  // The guest is already on the Online screen, the case where the Join button used to do nothing.
+  await guest.page.goto(`${APP}/online`);
   await host.page.getByRole('button', { name: 'Invite', exact: true }).click({ timeout: 15000 });
   await guest.page.getByText(/wants to play/).waitFor({ timeout: 20000 });
   await shot(guest, '0-invite-toast');
@@ -77,6 +78,8 @@ if (invite) {
 }
 await guest.page.getByRole('heading', { name: `Room ${code}` }).waitFor();
 await host.page.getByText(`guestp_${run} joined the room`).waitFor({ timeout: 10000 });
+// Toasts close themselves after a few seconds.
+await host.page.getByText(`guestp_${run} joined the room`).waitFor({ state: 'hidden', timeout: 9000 });
 
 // Chat: a line from the host reaches the guest.
 await host.page.getByLabel('Chat message').fill('good luck, mate');
@@ -106,6 +109,11 @@ console.log('transport: host', transport, '/ guest', gTransport);
 assert.equal(transport, gTransport, 'both sides use the same transport');
 if (relay) assert.equal(transport, 'relay');
 await host.page.waitForTimeout(2500);
+// Both sides measure the connection; the host holds their own presses back by half the round trip.
+for (const p of [host, guest]) await p.page.getByLabel(/^Ping [0-9]+ milliseconds/).waitFor({ timeout: 8000 });
+const delay = await host.page.evaluate(() => window.__fm.engineRef.current.hostInputDelayMs);
+assert.ok(delay >= 0 && delay <= 100, `host input delay is bounded (${delay})`);
+console.log('ping/delay ok, host input delay', delay.toFixed(1), 'ms');
 await shot(host, '3-playing');
 await shot(guest, '3-playing');
 
@@ -124,6 +132,10 @@ const b = await probe(host.page, a.g);
 await guest.page.keyboard.up('ArrowRight');
 await guest.page.keyboard.up('KeyE');
 assert.ok(b.x < a.x - 25, `guest input reached the host (${a.x} -> ${b.x})`);
+// Quick chat: the host says "GG", the guest sees it.
+await host.page.getByRole('button', { name: 'Chat' }).click();
+await host.page.getByRole('menuitem', { name: 'GG' }).click();
+await guest.page.getByRole('status').filter({ hasText: 'GG' }).waitFor({ timeout: 8000 });
 const clocks = await Promise.all([host.page, guest.page].map((p) => p.evaluate(() => window.__fm.hudRef.current.clock)));
 assert.ok(Math.abs(clocks[0] - clocks[1]) < 400, `clocks agree (${clocks})`);
 
@@ -171,6 +183,11 @@ if (leave) {
   const hh = await call('friendMatch/history', { limit: 5 }, host.jwt);
   const gh = await call('friendMatch/history', { limit: 5 }, guest.jwt);
   assert.equal(hh[0].match.status, 'finished');
+  // The finished match shows up in the rankings and unlocks the first achievement.
+  const lb = await call('rankings/leaderboard', { limit: 10 }, host.jwt);
+  assert.ok(lb.you && lb.you.played >= 1, 'the host is on the leaderboard');
+  const ach = await call('rankings/achievements', {}, host.jwt);
+  assert.equal(ach.find((x) => x.id === 'first_match').done, true);
   assert.equal(gh[0].match.id, hh[0].match.id);
   assert.equal(hh[0].match.hostGoals, gh[0].match.hostGoals);
   assert.equal(hh[0].match.transport, transport);

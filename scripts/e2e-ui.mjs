@@ -82,6 +82,15 @@ if (!quick) {
   await shot('6-hub-after');
 }
 
+// 6. Avatars: pick one on the profile, it shows in the header and survives a reload.
+await page.goto(`${APP}/profile`);
+await page.getByRole('button', { name: 'Change avatar' }).click();
+await page.getByRole('radio', { name: 'Avatar 5' }).click();
+await page.getByText('Avatar saved').waitFor();
+await page.reload();
+await page.locator('a[aria-label="Your profile"] svg[aria-label="Avatar 5"]').waitFor();
+await shot('7-avatar');
+
 assert.deepEqual(errors.filter((e) => !/favicon|Failed to load resource/.test(e)), []);
 await browser.close();
 console.log('e2e ok');

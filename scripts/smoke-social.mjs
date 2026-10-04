@@ -34,8 +34,33 @@ fa = await ask(a, 'friends/list');
 assert.equal(fa.friends[0].name, b.name);
 assert.equal(fa.friends[0].online, true, 'b checked in by listing, so a sees b online');
 
+// Avatars: one of the 24 pre-made ones, shown to friends, on invites and in the room.
+await assert.rejects(ask(a, 'profile/setAvatar', { avatar: 24 }), /Unknown avatar/);
+await assert.rejects(ask(a, 'profile/setAvatar', { avatar: -1 }), /Unknown avatar/);
+assert.equal((await ask(a, 'profile/setAvatar', { avatar: 7 })).avatar, 7);
+assert.equal((await ask(a, 'profile/me')).avatar, 7);
+assert.equal((await ask(b, 'friends/list')).friends[0].avatar, 7, 'a friend sees the avatar');
+
+// Settings and club follow the account: any JSON object, but bounded and valid.
+await assert.rejects(ask(a, 'profile/saveSettings', { json: 'not json' }), /not valid/);
+await assert.rejects(ask(a, 'profile/saveSettings', { json: '[1,2]' }), /not valid/);
+await assert.rejects(ask(a, 'profile/saveSettings', { json: JSON.stringify({ x: 'y'.repeat(9000) }) }), /too large/);
+await ask(a, 'profile/saveSettings', { json: JSON.stringify({ 'wc2026.difficulty': 'hard' }) });
+assert.equal(JSON.parse((await ask(a, 'profile/me')).settings)['wc2026.difficulty'], 'hard');
+await ask(a, 'profile/saveClub', { json: JSON.stringify({ name: 'Anna FC' }) });
+assert.equal(JSON.parse((await ask(a, 'profile/me')).club).name, 'Anna FC');
+
+// Achievements and the leaderboard exist for every player (nothing finished yet).
+const ach = await ask(a, 'rankings/achievements');
+assert.ok(ach.length >= 10);
+assert.equal(ach.find((x) => x.id === 'first_match').done, false);
+assert.equal(ach.find((x) => x.id === 'your_mark').progress, 2, 'avatar + club');
+const board = await ask(a, 'rankings/leaderboard', { limit: 5 });
+assert.ok(Array.isArray(board.top) && typeof board.total === 'number');
+
 // Invites: only friends, only from the host of an open room; joining clears the invite.
 let room = await ask(a, 'lobby/create', { clientVersion: V });
+assert.equal(room.hostAvatar, 7, 'the room carries the host avatar');
 await assert.rejects(ask(a, 'friends/invite', { userId: c.id, lobbyId: room.lobby.id }), /only invite friends/);
 await ask(a, 'friends/invite', { userId: b.id, lobbyId: room.lobby.id });
 await assert.rejects(ask(b, 'friends/invite', { userId: a.id, lobbyId: room.lobby.id }), /host/);
@@ -43,6 +68,7 @@ fb = await ask(b, 'friends/list');
 assert.equal(fb.invites.length, 1);
 assert.equal(fb.invites[0].code, room.lobby.code);
 assert.equal(fb.invites[0].fromName, a.name);
+assert.equal(fb.invites[0].fromAvatar, 7);
 await ask(b, 'lobby/join', { code: fb.invites[0].code, clientVersion: V });
 assert.equal((await ask(b, 'friends/list')).invites.length, 0);
 

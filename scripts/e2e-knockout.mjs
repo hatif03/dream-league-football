@@ -35,6 +35,8 @@ await page.getByText(/Round of 32 · Match \d+/i).first().waitFor();
 await page.waitForTimeout(800);
 await page.screenshot({ path: '.e2e-shots/ko-hub.png' });
 await page.getByRole('button', { name: /Play match/ }).click();
+// Formation: pick 3-5-2 on the intro card and the engine lines the team up that way.
+await page.getByRole('radio', { name: '3-5-2' }).click();
 await page.getByRole('button', { name: /Kick off/ }).click();
 await page.waitForFunction(() => window.__game?.current);
 await page.waitForTimeout(1500);
@@ -63,6 +65,12 @@ const cpu = await page.evaluate(async () => {
 });
 assert.ok(cpu.penalty >= 1, 'the CPU took the penalty (' + JSON.stringify(cpu) + ')');
 console.log('cpu set pieces:', JSON.stringify(cpu));
+
+// Half-time: crossing 45 minutes pauses play with a banner and a fresh kick-off.
+assert.equal(await page.evaluate(() => window.__game.current.homeTeam.formation), '3-5-2');
+await page.evaluate(() => { window.__game.current.elapsed = 89.5; });
+await page.getByText(/half time/i).first().waitFor({ timeout: 8000 });
+await page.waitForTimeout(3000);
 
 // Make it 0-0 with a minute to go: the game must go to extra time, not end.
 await page.evaluate(() => { const g = window.__game.current; g.homeScore = 0; g.awayScore = 0; g.elapsed = 179; });

@@ -78,9 +78,11 @@ const playerX = (page) => page.evaluate(() => window.__game.current.controlled.x
   const page = await ctx.newPage();
   watch(page);
   await page.goto(`${APP}/practice`);
-  await page.getByRole('button', { name: /Start practice/ }).click();
-  await page.getByRole('button', { name: /Kick off/ }).click();
+  await page.getByRole('button', { name: /Start practice/ }).tap();
+  // A real tap, as on a phone: focusing the button must not reshuffle the card under the finger.
+  await page.getByRole('button', { name: /Kick off/ }).tap();
   await page.waitForFunction(() => window.__game?.current);
+  await page.getByLabel('Move', { exact: true }).waitFor({ timeout: 5000 });
   const stick = page.getByLabel('Move', { exact: true });
   await stick.waitFor({ timeout: 5000 });
   const box = await stick.boundingBox();
