@@ -19,12 +19,17 @@ export interface Link {
   sendBye(): void;
   /** The opponent said goodbye. */
   onBye: (() => void) | null;
+  /** Quick chat: send the index of a phrase in EMOTES, and hear the opponent's. */
+  sendEmote(code: number): void;
+  onEmote: ((code: number) => void) | null;
   onSnapshot: ((s: Snapshot) => void) | null;
   onInput: ((m: InputMsg) => void) | null;
   /** The link died: the peer left, the network dropped, or it went silent. */
   onClose: ((reason: string) => void) | null;
   /** Milliseconds since anything arrived from the peer. */
   silentMs(): number;
+  /** Smoothed round-trip time to the peer in ms, or null before the first reply. */
+  rttMs(): number | null;
   close(): void;
 }
 
@@ -46,11 +51,13 @@ const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 class BaseLink implements Link {
   onSnapshot: Link['onSnapshot'] = null;
   onBye: Link['onBye'] = null;
+  onEmote: Link['onEmote'] = null;
   onInput: Link['onInput'] = null;
   onClose: Link['onClose'] = null;
   private lastRecv = performance.now();
   private timer = 0;
   private closed = false;
+  private rtt: number | null = null;
 
   constructor(
     public transport: Link['transport'],
@@ -59,7 +66,7 @@ class BaseLink implements Link {
     private closeImpl: () => void,
   ) {
     this.timer = window.setInterval(() => {
-      this.sendCtl('{"k":"h"}');
+      this.sendCtl(`{"k":"p","t":${performance.now()}}`); // heartbeat and ping in one
       if (this.silentMs() > SILENT_LIMIT_MS) this.fail('timeout');
     }, HEARTBEAT_MS);
   }
@@ -70,6 +77,9 @@ class BaseLink implements Link {
   sendInput(m: InputMsg) {
     this.sendCtl(JSON.stringify({ k: 'i', d: m }));
   }
+  sendEmote(code: number) {
+    this.sendCtl(`{"k":"e","c":${Math.trunc(code)}}`);
+  }
   sendBye() {
     // Reliable channel, twice: the other side may be mid-snapshot.
     this.sendCtl('{"k":"b"}');
@@ -78,11 +88,14 @@ class BaseLink implements Link {
   silentMs() {
     return performance.now() - this.lastRecv;
   }
+  rttMs() {
+    return this.rtt;
+  }
 
   /** Feed every received text frame here. */
   receive(text: string) {
     this.lastRecv = performance.now();
-    let m: { k: string; d?: unknown };
+    let m: { k: string; d?: unknown; t?: number; c?: number };
     try {
       m = JSON.parse(text);
     } catch {
@@ -91,6 +104,12 @@ class BaseLink implements Link {
     if (m.k === 's') this.onSnapshot?.(m.d as Snapshot);
     else if (m.k === 'i') this.onInput?.(m.d as InputMsg);
     else if (m.k === 'b') this.onBye?.();
+    else if (m.k === 'e' && Number.isInteger(m.c)) this.onEmote?.(m.c as number);
+    else if (m.k === 'p') this.sendCtl(`{"k":"o","t":${Number(m.t) || 0}}`);
+    else if (m.k === 'o') {
+      const sample = performance.now() - (m.t ?? 0);
+      if (sample >= 0 && sample < 2000) this.rtt = this.rtt == null ? sample : this.rtt * 0.8 + sample * 0.2;
+    }
   }
 
   fail(reason: string) {

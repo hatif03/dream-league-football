@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { MessageCircle } from 'lucide-react';
+import { EMOTES } from '@/client/net/emotes';
 import { toast } from 'react-hot-toast';
 import { PitchKickGame } from '@/client/game/engine';
 import { GuestView } from '@/client/game/guestView';
@@ -68,6 +70,10 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
   const [hud, setHudState] = useState<HudState>(EMPTY_HUD);
   const [result, setResult] = useState<MatchView | null>(null);
   const [menu, setMenu] = useState(false);
+  const [ping, setPing] = useState<number | null>(null);
+  const [bubble, setBubble] = useState<{ who: string; text: string; n: number } | null>(null);
+  const [emoteOpen, setEmoteOpen] = useState(false);
+  const lastEmote = useRef(0);
   const lastMsg = useRef('');
 
   const setHud = useCallback((h: HudState) => {
@@ -136,6 +142,10 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
     (link: Link) => {
       linkRef.current = link;
       link.onBye = () => void opponentLeft();
+      link.onEmote = (c) => {
+        const text = EMOTES[c];
+        if (text) setBubble({ who: opponentName, text, n: Date.now() });
+      };
       if (role === 'host') {
         const engine = engineRef.current!;
         link.onInput = (m) => engine.guestInput(m.held, m.pressed, m.released);
@@ -149,7 +159,7 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
       };
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [role, opponentLeft],
+    [role, opponentLeft, opponentName],
   );
 
   const recover = useCallback(
@@ -234,6 +244,35 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
   }, [phase, matchId, showResult]);
 
   useEffect(() => engineRef.current?.setBindings(bindings), [bindings]);
+
+  useEffect(() => {
+    if (!bubble) return;
+    const t = window.setTimeout(() => setBubble(null), 3000);
+    return () => window.clearTimeout(t);
+  }, [bubble]);
+  const sendEmote = (c: number) => {
+    const now = Date.now();
+    if (now - lastEmote.current < 1200) return;
+    lastEmote.current = now;
+    linkRef.current?.sendEmote(c);
+    setBubble({ who: 'You', text: EMOTES[c], n: now });
+    setEmoteOpen(false);
+  };
+
+  // Connection quality, and the fairness delay: the host holds their own presses back by the guest's
+  // input latency (half the round trip) so neither player has a head start (see PitchKickGame.setInputDelay).
+  useEffect(() => {
+    if (phase !== 'playing') return;
+    const t = window.setInterval(() => {
+      const rtt = linkRef.current?.rttMs() ?? null;
+      setPing(rtt == null ? null : Math.round(rtt));
+      if (role === 'host') engineRef.current?.setInputDelay(rtt == null ? 0 : rtt / 2);
+    }, 2000);
+    return () => {
+      window.clearInterval(t);
+      engineRef.current?.setInputDelay(0);
+    };
+  }, [phase, role]);
   useEffect(() => {
     engineRef.current?.suspendInput(menu);
     guestRef.current?.suspendInput(menu);
@@ -321,6 +360,30 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
       {live && <MatchHud home={home} away={away} hud={hud} homeLabel={homeName} awayLabel={awayName} tag={role === 'host' ? 'Hosting' : undefined} />}
       {live && <ChargeBar charge={hud.charge} />}
       {live && <CornerButtons onPause={() => setMenu(true)} />}
+      {live && ping != null && (
+        <div className="pointer-events-none absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[calc(max(0.75rem,env(safe-area-inset-top))+3rem)] z-10 rounded-[3px] bg-ink-950/70 px-2 py-0.5 font-display text-xs font-bold uppercase tracking-wider text-mist-300" aria-label={`Ping ${ping} milliseconds`}>
+          <span className={ping < 80 ? 'text-win' : ping < 150 ? 'text-gold-400' : 'text-loss'}>●</span> {ping} ms
+        </div>
+      )}
+      {phase === 'playing' && !menu && (
+        <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-1/2 z-20 flex -translate-x-1/2 flex-col items-center gap-2">
+          {emoteOpen && (
+            <div role="menu" aria-label="Quick chat" className="glass-solid grid max-w-[22rem] grid-cols-5 gap-1.5 p-2 animate-pop">
+              {EMOTES.map((t, c) => (
+                <button key={c} role="menuitem" className="rounded bg-white/10 px-2 py-1.5 font-display text-sm font-bold uppercase leading-tight text-white hover:bg-white/25" onClick={() => sendEmote(c)}>{t}</button>
+              ))}
+            </div>
+          )}
+          <button className="flex h-10 items-center gap-2 rounded-full bg-ink-950/70 px-4 font-display text-sm font-bold uppercase tracking-wider text-white ring-1 ring-white/25 hover:bg-ink-950" aria-expanded={emoteOpen} onClick={() => setEmoteOpen((o) => !o)}>
+            <MessageCircle size={16} /> Chat
+          </button>
+        </div>
+      )}
+      {bubble && (
+        <div key={bubble.n} className="pointer-events-none absolute left-1/2 top-[max(5rem,calc(env(safe-area-inset-top)+4rem))] z-20 -translate-x-1/2 rounded-full bg-white px-4 py-1.5 font-display text-lg font-bold uppercase text-ink-950 shadow-xl animate-pop" role="status">
+          <span className="text-ink-600">{bubble.who}:</span> {bubble.text}
+        </div>
+      )}
       {phase === 'playing' && touchEnabled(touch.mode) && !menu && <TouchControls sink={sink} layout={touch.layout} />}
       <RotatePrompt />
 
