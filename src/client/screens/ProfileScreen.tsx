@@ -5,11 +5,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Avatar, Badge, Btn, Spinner } from '@/client/ui/controls';
 import { Flag } from '@/client/ui/Flag';
 import { useDialog } from '@/client/ui/Dialog';
-import { TEAMS, nationId, teamById } from '@/client/game/teams';
+import { TEAMS, nationId } from '@/client/game/teams';
 import { call } from '@/client/api/http';
-import { signOut, useSession } from '@/client/api/session';
+import { applyProfile, signOut, useSession, type UserProfile } from '@/client/api/session';
+import { AvatarPicker } from '@/client/ui/avatars';
+import { Pencil } from 'lucide-react';
 import { deleteAccount } from '@/client/api/social';
-import { useHistory, useRecord } from '@/client/api/queries';
+import { useAchievements, useHistory, useRecord } from '@/client/api/queries';
+import { Crest } from '@/client/ui/Crest';
+import { parseClub } from '@/client/game/club';
+import { Link } from 'react-router-dom';
+import { Check, Lock } from 'lucide-react';
 import type { MatchView } from '@/client/api/friend';
 
 function matchLine(m: MatchView) {
@@ -35,7 +41,9 @@ export default function ProfileScreen() {
   const qc = useQueryClient();
   const record = useRecord();
   const history = useHistory(15);
+  const achievements = useAchievements();
   const [saving, setSaving] = useState(false);
+  const [choosing, setChoosing] = useState(false);
 
   if (session.status !== 'in') return <div className="p-10"><Spinner /></div>;
   const profile = session.profile;
@@ -43,8 +51,21 @@ export default function ProfileScreen() {
   const setFav = async (id: string) => {
     setSaving(true);
     try {
-      await call('profile/updateProfile', { region: profile.region ?? null, favouriteNation: id || null });
+      applyProfile(await call<UserProfile>('profile/updateProfile', { region: profile.region ?? null, favouriteNation: id || null }));
       toast.success('Saved');
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const pickAvatar = async (id: number) => {
+    setSaving(true);
+    try {
+      applyProfile(await call<UserProfile>('profile/setAvatar', { avatar: id }));
+      setChoosing(false);
+      toast.success('Avatar saved');
     } catch (e) {
       toast.error((e as Error).message);
     } finally {
@@ -84,10 +105,27 @@ export default function ProfileScreen() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
       <div className="glass flex flex-wrap items-center gap-5 p-5 md:p-7 animate-screen-in">
-        <Avatar name={profile.displayName} online size={84} />
+        <button className="relative rounded-full focus-visible:ring-4 focus-visible:ring-neon-400" onClick={() => setChoosing((c) => !c)} aria-expanded={choosing} aria-label="Change avatar">
+          <Avatar name={profile.displayName} avatar={profile.avatar} online size={84} />
+          <span className="absolute -bottom-1 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-neon-400 text-ink-950 ring-2 ring-ink-900"><Pencil size={14} /></span>
+        </button>
         <div className="min-w-0 flex-1">
           <div className="t-label">Player</div>
           <h1 className="t-display truncate text-4xl text-white md:text-6xl">{profile.displayName}</h1>
+          <div className="mt-1 flex flex-wrap items-center gap-2">
+            {parseClub(profile.club) && (
+              <>
+                <Crest crest={parseClub(profile.club)!.crest} size={26} />
+                <span className="font-display text-lg font-bold uppercase text-mist-200">{parseClub(profile.club)!.name}</span>
+              </>
+            )}
+            <Link to="/club" className="rounded bg-white/10 px-3 py-1 font-display text-sm font-bold uppercase tracking-wider text-mist-100 hover:bg-white/20">
+              {profile.club ? 'Edit club' : 'Design your club'}
+            </Link>
+            <Link to="/leaderboard" className="rounded bg-white/10 px-3 py-1 font-display text-sm font-bold uppercase tracking-wider text-mist-100 hover:bg-white/20">
+              Leaderboard
+            </Link>
+          </div>
         </div>
         <label className="flex items-center gap-3">
           <span className="t-label hidden sm:inline">Favourite nation</span>
@@ -98,6 +136,12 @@ export default function ProfileScreen() {
           </select>
         </label>
       </div>
+      {choosing && (
+        <div className="glass mt-3 p-4 animate-screen-in">
+          <div className="t-label mb-2">Choose your avatar</div>
+          <AvatarPicker wide value={profile.avatar} onPick={pickAvatar} disabled={saving} />
+        </div>
+      )}
 
       <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Friend match record">
         {[
@@ -111,6 +155,38 @@ export default function ProfileScreen() {
             <div className="t-label">{label}</div>
           </div>
         ))}
+      </section>
+
+      <section className="glass mt-5 p-5" aria-label="Achievements">
+        <h2 className="t-display mb-3 text-2xl text-white">
+          Achievements{achievements.data ? ` · ${achievements.data.filter((a) => a.done).length}/${achievements.data.length}` : ''}
+        </h2>
+        {achievements.isLoading ? (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="skeleton h-16" />
+            ))}
+          </div>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {achievements.data?.map((a) => (
+              <li key={a.id} className={`flex items-center gap-3 rounded p-3 ${a.done ? 'bg-win/15 ring-1 ring-win/40' : 'bg-white/5'}`}>
+                <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${a.done ? 'bg-win text-ink-950' : 'bg-white/10 text-mist-400'}`}>
+                  {a.done ? <Check size={18} /> : <Lock size={16} />}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-lg font-bold uppercase leading-tight text-white">{a.title}</span>
+                  <span className="block font-body text-xs text-mist-300">{a.description}</span>
+                  {!a.done && a.target > 1 && (
+                    <span className="mt-1 block h-1.5 rounded bg-white/10">
+                      <span className="block h-1.5 rounded bg-neon-400" style={{ width: `${Math.round((a.progress / a.target) * 100)}%` }} />
+                    </span>
+                  )}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <div className="mt-5 grid gap-5 md:grid-cols-2">
@@ -164,7 +240,6 @@ export default function ProfileScreen() {
         <Btn onClick={doSignOut}>Sign out</Btn>
         <button className="font-body text-sm text-mist-400 underline hover:text-loss" onClick={doDelete}>Delete my account</button>
       </div>
-      <p className="mt-6 text-center font-body text-xs text-mist-500">{teamById(profile.favouriteNation ?? '')?.name ? `Supporting ${teamById(profile.favouriteNation ?? '')?.name}` : ''}</p>
     </div>
   );
 }

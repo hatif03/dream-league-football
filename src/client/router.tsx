@@ -6,7 +6,7 @@ import { useSession } from '@/client/api/session';
 import { AppShell } from '@/client/ui/AppShell';
 import { DialogProvider } from '@/client/ui/Dialog';
 import { HintsProvider } from '@/client/ui/hints';
-import { NotificationsProvider } from '@/client/ui/Notifications';
+import { NotificationsProvider, ToastReaper } from '@/client/ui/Notifications';
 import { SettingsProvider } from '@/client/ui/settings';
 import { Spinner } from '@/client/ui/controls';
 import { MatchProvider } from '@/client/screens/matchContext';
@@ -30,6 +30,7 @@ function RootLayout() {
             <HintsProvider>
               <NotificationsProvider>
                 <Seo />
+                <ToastReaper />
                 <Toaster
                   position="top-center"
                   toastOptions={{
@@ -103,6 +104,8 @@ const routes: RouteObject[] = [
               { path: '/world-cup', Component: L(() => import('@/client/screens/WorldCupScreen')) },
               { path: '/online', Component: L(() => import('@/client/screens/OnlineScreen')) },
               { path: '/profile', Component: L(() => import('@/client/screens/ProfileScreen')) },
+              { path: '/club', Component: L(() => import('@/client/screens/ClubScreen')) },
+              { path: '/leaderboard', Component: L(() => import('@/client/screens/LeaderboardScreen')) },
             ],
           },
           { path: '/logout', Component: L(() => import('@/client/screens/LogoutScreen')) },
