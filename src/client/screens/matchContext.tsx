@@ -5,7 +5,8 @@ import type { LobbyView } from '@/client/api/friend';
 import type { TournamentFixture } from '@/client/api/tournament';
 
 export type MatchConfig =
-  | { kind: 'practice'; home: TeamData; away: TeamData; returnTo: string }
+  | { kind: 'practice'; home: TeamData; away: TeamData; returnTo: string; tutorial?: boolean }
+  | { kind: 'friendly'; home: TeamData; away: TeamData; returnTo: string }
   | { kind: 'worldcup'; fixture: TournamentFixture; tournamentId: string; user: TeamData; opp: TeamData; returnTo: string }
   | { kind: 'friend'; view: LobbyView; returnTo: string };
 

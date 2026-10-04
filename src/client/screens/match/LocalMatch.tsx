@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSession } from '@/client/api/session';
+import { applyClubKit, parseClub } from '@/client/game/club';
 import { toast } from 'react-hot-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { PitchKickGame } from '@/client/game/engine';
@@ -10,14 +12,17 @@ import { useDeviceInput } from '@/client/game/useDeviceInput';
 import { TouchControls } from '@/client/components/game/TouchControls';
 import { ShootoutHud } from '@/client/components/game/ShootoutHud';
 import { Btn } from '@/client/ui/controls';
+import { applyFormation, loadFormation, saveFormation } from '@/client/game/teams/formations';
 import { useDialog } from '@/client/ui/Dialog';
 import { MenuNav } from '@/client/ui/MenuNav';
 import { ChargeBar, MatchHud } from '@/client/ui/MatchHud';
 import { useSettings } from '@/client/ui/settings';
 import { sfx } from '@/client/ui/sfx';
 import { ROUND_NAMES, submitResult, type TournamentFixture } from '@/client/api/tournament';
-import { CornerButtons, IntroCard, MatchStage, PauseMenu, ResultPanel, RotatePrompt } from './shared';
+import { CornerButtons, FormationPicker, IntroCard, MatchStage, PauseMenu, ResultPanel, RotatePrompt } from './shared';
 import { usePauseKeys } from './usePause';
+import { Tutorial } from './Tutorial';
+import { ShareResultBtn, cardFor } from '@/client/ui/ShareResult';
 
 const EMPTY_HUD: HudState = { homeScore: 0, awayScore: 0, clock: 0, message: '', possession: 'none', homePlayer: null, awayPlayer: null, charge: null, finished: false };
 type Stage = 'intro' | 'playing' | 'shootout' | 'result';
@@ -26,29 +31,39 @@ type SaveState = 'idle' | 'saving' | 'saved' | 'error';
 /** Practice and World Cup matches: everything runs in this browser. */
 export function LocalMatch({
   kind,
-  home,
+  home: homeTeam,
   away,
   fixture,
   tournamentId,
+  tutorial,
   onExit,
 }: {
-  kind: 'practice' | 'worldcup';
+  kind: 'practice' | 'worldcup' | 'friendly';
+  /** Practice with the coach on the pitch. */
+  tutorial?: boolean;
   home: TeamData;
   away: TeamData;
   fixture?: TournamentFixture;
   tournamentId?: string;
   onExit: () => void;
 }) {
+  // The player's own kit, if they designed a club and chose to wear it.
+  const session = useSession();
+  const clubJson = session.status === 'in' ? session.profile.club : null;
+  const home = useMemo(() => applyClubKit(homeTeam, parseClub(clubJson)), [homeTeam, clubJson]);
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<PitchKickGame | null>(null);
   const shootRef = useRef<PenaltyShootout | null>(null);
   const dialog = useDialog();
   const qc = useQueryClient();
-  const { bindings, pad, touch, difficulty } = useSettings();
+  const { bindings, pad, touch, difficulty, matchSecs } = useSettings();
+  const [formation, setFormation] = useState<string | null>(() => loadFormation());
   const knockout = !!fixture && fixture.round !== 'group';
 
   const [stage, setStage] = useState<Stage>('intro');
   const [paused, setPaused] = useState(false);
+  const [coach, setCoach] = useState(!!tutorial);
   const [hud, setHud] = useState<HudState>(EMPTY_HUD);
   const [shoot, setShoot] = useState<ShootoutState | null>(null);
   const [saveState, setSaveState] = useState<SaveState>('idle');
@@ -69,7 +84,7 @@ export function LocalMatch({
       const pAway: TeamData = { ...away, players: away.players.slice(0, 1), kickoffFwd: 0 };
       game = new PitchKickGame(canvas, setHud, pHome, pAway, { practice: true, bindings, difficulty });
     } else {
-      game = new PitchKickGame(canvas, setHud, home, away, { bindings, knockout, difficulty });
+      game = new PitchKickGame(canvas, setHud, applyFormation(home, formation), away, { bindings, knockout, difficulty, matchSecs });
     }
     engineRef.current = game;
     if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = engineRef;
@@ -83,7 +98,7 @@ export function LocalMatch({
       engineRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameKey]);
+  }, [gameKey, formation]);
 
   useEffect(() => engineRef.current?.setBindings(bindings), [bindings]);
 
@@ -128,10 +143,12 @@ export function LocalMatch({
   // Full time: a knockout still level after extra time goes to penalties; anything else is saved.
   const tied = hud.homeScore === hud.awayScore;
   useEffect(() => {
-    if (kind !== 'worldcup' || stage !== 'playing' || !hud.finished || saveState !== 'idle') return;
+    if (kind === 'practice' || stage !== 'playing' || !hud.finished || saveState !== 'idle') return;
     sfx.whistle();
     engineRef.current?.stop();
-    if (knockout && tied) {
+    if (kind === 'friendly') {
+      setStage('result');
+    } else if (knockout && tied) {
       pensRef.current = null;
       setShoot(null);
       setStage('shootout');
@@ -169,7 +186,7 @@ export function LocalMatch({
     onExit();
   };
 
-  const label = kind === 'practice' ? 'Practice' : fixture ? (fixture.round === 'group' ? `World Cup · Group ${fixture.groupName} · Matchday ${fixture.matchday}` : `World Cup · ${ROUND_NAMES[fixture.round]}`) : 'World Cup';
+  const label = kind === 'practice' ? 'Practice' : kind === 'friendly' ? 'Friendly' : fixture ? (fixture.round === 'group' ? `World Cup · Group ${fixture.groupName} · Matchday ${fixture.matchday}` : `World Cup · ${ROUND_NAMES[fixture.round]}`) : 'World Cup';
   const menuOpen = paused || stage === 'intro' || stage === 'result';
   const pens = pensRef.current;
   const winner = pens ? (pens.home > pens.away ? 'home' : 'away') : hud.homeScore > hud.awayScore ? 'home' : hud.homeScore < hud.awayScore ? 'away' : 'draw';
@@ -189,15 +206,27 @@ export function LocalMatch({
         </>
       )}
       <RotatePrompt />
+      {stage === 'playing' && kind === 'practice' && coach && !paused && <Tutorial engine={() => engineRef.current} hud={hud} onClose={() => setCoach(false)} />}
 
-      {stage === 'intro' && <IntroCard home={home} away={away} label={label} sub={kind === 'practice' ? 'No clock, no rules. Just you, four teammates and a keeper.' : knockout ? 'Knockout: extra time and penalties if level after 90 minutes.' : undefined} onStart={kickOff} onBack={onExit} />}
+      {stage === 'intro' && <IntroCard home={home} away={away} label={label} sub={kind === 'practice' ? 'No clock, no rules. Just you, four teammates and a keeper.' : kind === 'friendly' ? 'A full 11 v 11 against the CPU. Nothing is saved.' : knockout ? 'Knockout: extra time and penalties if level after 90 minutes.' : undefined} onStart={kickOff} onBack={onExit}>
+        {kind !== 'practice' && <FormationPicker team={home} value={formation} onChange={(id) => { setFormation(id); saveFormation(id); }} />}
+      </IntroCard>}
 
-      {paused && <PauseMenu onResume={() => pause(false)} onQuit={quit} onRestart={kind === 'practice' ? () => { pause(false); setGameKey((k) => k + 1); } : undefined} />}
+      {paused && <PauseMenu onResume={() => pause(false)} onQuit={quit} onRestart={kind !== 'worldcup' ? () => { pause(false); setGameKey((k) => k + 1); } : undefined} />}
+
+      {stage === 'result' && kind === 'friendly' && (
+        <ResultPanel home={home} away={away} hud={hud} headline={headline} sub="Friendly: nothing is saved.">
+          <Btn variant="primary" size="lg" onClick={() => { setGameKey((k) => k + 1); }} autoFocus data-autofocus>Play again</Btn>
+          <ShareResultBtn info={cardFor(home, away, hud, 'Friendly', headline)} />
+          <Btn size="lg" data-back onClick={onExit}>Back</Btn>
+        </ResultPanel>
+      )}
 
       {stage === 'result' && kind === 'worldcup' && (
         <ResultPanel home={home} away={away} hud={hud} headline={headline} pens={pens} sub={saveState === 'saving' ? 'Saving your result…' : saveState === 'saved' ? 'Result saved to your World Cup.' : saveState === 'error' ? 'Could not save the result. Your score is kept: try again.' : undefined}>
           {saveState === 'error' && <Btn variant="primary" size="lg" onClick={save}>Retry save</Btn>}
           {saveState === 'saved' && <Btn variant="primary" size="lg" onClick={onExit} autoFocus data-autofocus>Continue</Btn>}
+          {saveState !== 'idle' && <ShareResultBtn info={cardFor(home, away, hud, label, headline, pens ? `${(pens.home > pens.away ? home : away).name} win ${Math.max(pens.home, pens.away)}–${Math.min(pens.home, pens.away)} on penalties` : undefined)} />}
         </ResultPanel>
       )}
     </MatchStage>

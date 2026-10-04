@@ -21,5 +21,8 @@ export default function MatchScreen() {
   if (config.kind === 'worldcup') {
     return <LocalMatch key={config.fixture.id} kind="worldcup" home={config.user} away={config.opp} fixture={config.fixture} tournamentId={config.tournamentId} onExit={() => end()} />;
   }
-  return <LocalMatch kind="practice" home={config.home} away={config.away} onExit={() => end()} />;
+  if (config.kind === 'friendly') {
+    return <LocalMatch kind="friendly" home={config.home} away={config.away} onExit={() => end()} />;
+  }
+  return <LocalMatch kind="practice" home={config.home} away={config.away} tutorial={config.tutorial} onExit={() => end()} />;
 }

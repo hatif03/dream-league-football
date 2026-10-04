@@ -6,10 +6,11 @@ import { Btn } from '@/client/ui/controls';
 import { Flag } from '@/client/ui/Flag';
 import { PracticeArt } from '@/client/ui/art';
 import { useSession } from '@/client/api/session';
+import { tutorialDone } from './match/Tutorial';
 import { NationModal } from './online/parts';
 import { useMatch } from './matchContext';
 
-/** Practice: pick your side and whose keeper you shoot at, then straight onto the pitch. */
+/** Practice (four team-mates and a keeper) or a Friendly (a full 11 v 11 against the CPU); pick the teams, then onto the pitch. */
 export default function PracticeScreen() {
   const session = useSession();
   const match = useMatch();
@@ -18,8 +19,11 @@ export default function PracticeScreen() {
   const [mine, setMine] = useState(nationId(fav ?? fixture?.home ?? TEAMS[0]));
   const [theirs, setTheirs] = useState(nationId(fixture && nationId(fixture.away) !== nationId(fav ?? fixture.home) ? fixture.away : TEAMS[1]));
   const [pick, setPick] = useState<'mine' | 'theirs' | null>(null);
+  const [mode, setMode] = useState<'practice' | 'friendly'>('practice');
+  const friendly = mode === 'friendly';
 
-  const start = () => match.start({ kind: 'practice', home: teamById(mine)!, away: teamById(theirs)!, returnTo: '/practice' });
+  const start = () => match.start({ kind: mode, home: teamById(mine)!, away: teamById(theirs)!, returnTo: '/practice' });
+  const learn = () => match.start({ kind: 'practice', home: teamById(mine)!, away: teamById(theirs)!, returnTo: '/practice', tutorial: true });
   const side = (which: 'mine' | 'theirs', nation: string, title: string) => {
     const t = teamById(nation)!;
     return (
@@ -38,18 +42,32 @@ export default function PracticeScreen() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-5 md:py-8">
       <div className="mb-4">
-        <div className="t-label">Warm up</div>
-        <h1 className="t-display text-4xl text-white md:text-6xl">Practice</h1>
+        <div className="t-label">{friendly ? 'Play the CPU' : 'Warm up'}</div>
+        <h1 className="t-display text-4xl text-white md:text-6xl">{friendly ? 'Friendly' : 'Practice'}</h1>
       </div>
+      <div role="radiogroup" aria-label="Mode" className="mb-4 grid max-w-md grid-cols-2 gap-2">
+        {(['practice', 'friendly'] as const).map((m) => (
+          <button key={m} role="radio" aria-checked={mode === m} onClick={() => setMode(m)} className={`rounded py-2.5 font-display text-lg font-bold uppercase tracking-wider ${mode === m ? 'bg-neon-400 text-ink-950' : 'bg-white/10 text-mist-200 hover:bg-white/20'}`}>
+            {m === 'practice' ? 'Practice' : '11 v 11 friendly'}
+          </button>
+        ))}
+      </div>
+      {!friendly && !tutorialDone() && (
+        <div className="glass mb-4 flex flex-wrap items-center gap-3 border-l-4 border-neon-400 p-3">
+          <p className="min-w-0 flex-1 font-body text-sm text-mist-100"><b>New here?</b> A two-minute tutorial shows you how to run, pass, shoot and defend.</p>
+          <Btn size="sm" variant="primary" onClick={learn}>Take the tutorial</Btn>
+        </div>
+      )}
       <div className="glass-solid grid gap-6 p-5 md:grid-cols-[1fr_1.1fr] md:p-7 animate-screen-in">
         <div className="flex flex-col items-center justify-center gap-3">
           <PracticeArt className="h-44 w-auto" />
-          <p className="text-center font-body text-mist-300">Four teammates and a keeper. No clock, no rules to worry about. Shoot, pass, and learn how it feels.</p>
+          <p className="text-center font-body text-mist-300">{friendly ? 'A full match against the CPU with real rules, half-time and your choice of formation. Nothing is saved, so play it for fun.' : 'Four teammates and a keeper. No clock, no rules to worry about. Shoot, pass, and learn how it feels.'}</p>
         </div>
         <div className="flex flex-col gap-3">
           {side('mine', mine, 'Your team')}
-          {side('theirs', theirs, "Goalkeeper's team")}
-          <Btn variant="primary" size="lg" className="mt-2" onClick={start} autoFocus data-autofocus="">▶ Start practice</Btn>
+          {side('theirs', theirs, friendly ? "CPU's team" : "Goalkeeper's team")}
+          <Btn variant="primary" size="lg" className="mt-2" onClick={start} autoFocus data-autofocus="">{friendly ? '▶ Start friendly' : '▶ Start practice'}</Btn>
+          {!friendly && <Btn onClick={learn}>Learn the basics</Btn>}
         </div>
       </div>
       {pick && (
