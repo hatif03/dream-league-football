@@ -2,6 +2,24 @@
 
 What changed, newest first, grouped by theme. The game itself has been built since 25 September 2026; the Serverpod back end, online play and the new interface came in early October 2026.
 
+## Second round of features (4 October 2026)
+
+- **11 v 11 friendly** against the CPU, **interactive tutorial**, **quick chat** in online matches, **install as an app** (manifest, icons, install card), **shareable result cards**.
+- **Settings saved to your account** (`UserProfile.settings`, `profile/saveSettings`), a **club crest and kit editor** (`UserProfile.club`, `profile/saveClub`), **12 achievements** and a global **leaderboard** (new `rankings` endpoint). New migration.
+- Google and Apple sign-in were not added: they need credentials from your own Google or Apple developer account.
+
+## Fixes and additions after the first phone tests (4 October 2026)
+
+- **Phone: could not start a match.** Focusing a button switched the "last device used" to keyboard, so tapping Kick Off reshuffled the intro card under the finger and the tap missed; the next touch flipped it back. Focus no longer changes the device.
+- **Invite toast: Join did nothing** when you were already on the Online screen (the join code was only read once). It now joins from anywhere, and asks before leaving a room you are in.
+- **Toasts now close themselves** (they could stay forever on a phone). Invites close after 10 s.
+- Removed the "Supporting <nation>" line from the profile (it repeated the favourite-nation menu above it).
+- **Avatars:** 24 pre-made avatars (new `UserProfile.avatar` column, `profile/setAvatar`, avatar on friends, invites and rooms).
+- **Online latency fairness:** ping measured on the heartbeat and shown in matches; the host's own key presses are held back by half the round trip.
+- **Half-time** break, selectable **match length** (3, 5, 8 min), and a **formation** choice before World Cup matches.
+- A small vibration on touch buttons and goals.
+- New [docs/ROADMAP.md](docs/ROADMAP.md): the mechanics inventory, what is missing, and experience ideas.
+
 ## Dream League Football (October 2026)
 
 - **Renamed the application to Dream League Football** (header logo, page title, share text, legal text, pitch advertising boards, package name). The solo mode keeps the name "World Cup". The engine codename `PitchKickGame` and the Serverpod Cloud project id `football` are unchanged.

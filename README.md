@@ -25,7 +25,7 @@ The whole back end is a single Serverpod 4.0.3 project (Dart + PostgreSQL) in [`
 | **JWT token manager** | Short-lived access tokens (10 minutes) plus refresh tokens; the React app refreshes on expiry. |
 | **Endpoints** (`Endpoint` classes, `requireLogin`) | Every game call: profile, solo tournament, friend rooms, match results, friends, chat, reports, operator tools. Called from TypeScript as plain `POST /<endpoint>/<method>` JSON, so the web app does not need the generated Dart client. |
 | **ORM + models** (`.spy.yaml`) | 12 tables (profiles, tournaments, fixtures, lobbies, friend matches, friendships, blocks, invites, chat, reports, audit log). Typed, generated, with transactions and **row locks** (`LockMode.forUpdate`) so two players signing a result at the same instant never overwrite each other. |
-| **Migrations** | 7 versioned migrations applied at boot (`--apply-migrations`). |
+| **Migrations** | 9 versioned migrations applied at boot (`--apply-migrations`). |
 | **Embedded PostgreSQL** | Local development and tests need no Docker: `database.dataPath` makes Serverpod run its own Postgres. |
 | **Web server (Relic)** | Serves the built React app with a single-page fallback, and hosts the **`/relay/:matchId` WebSocket** that carries a match when two browsers cannot connect directly. One origin in production: no CORS, no cookies. |
 | **Serverpod Cloud** (`scloud`) | One-command deploy of the server, the database, the web app and the email service. Secrets (such as the operator list) are set with `scloud password set`. |
@@ -41,6 +41,8 @@ Read [docs/SERVERPOD.md](docs/SERVERPOD.md) for the full tour, and [docs/API.md]
 - **Friends, chat, invites, blocks and reports**, a record with head-to-head, presence dots, account deletion.
 - **Real football rules.** Offside, throw-ins, corners, goal kicks, fouls with free kicks and a four-man wall, penalties, yellow and red cards, extra time, shootouts.
 - **Depth.** Charged shots and passes, through balls, lofted passes, slide tackles, contain, a goalkeeper with dives and handling rules, FIFA-style player ratings (pace, shooting, passing, dribbling, defending, physicality) that change how every player actually plays, and three CPU difficulty levels.
+- **Make it yours.** 24 pre-made avatars, a club crest and kit editor, your own formation, a match length of 3, 5 or 8 minutes, and settings that follow your account.
+- **Learn, compete, share.** An interactive tutorial, a full 11 v 11 friendly against the CPU, 12 achievements, a global leaderboard, quick chat in online matches, shareable result cards, and an installable app.
 - **Play on anything.** Keyboard, controller (Gamepad API) or touch. Every input is rebindable. The menus are console-style (arrows or D-pad, Enter/A, Esc/B) and the footer shows the buttons for the device you used last.
 
 ## Quick start
@@ -101,6 +103,7 @@ Hold a shot or pass to charge power, release to kick. All keys, controller butto
 | [docs/GAMEPLAY.md](docs/GAMEPLAY.md) | Modes, controls, rules, ratings, difficulty, the World Cup format |
 | [docs/UI.md](docs/UI.md) and [UI_PLAN.md](UI_PLAN.md) | The "Matchday Night" design system, screens, navigation, mobile |
 | [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) | Setup, scripts, all tests, deploying, troubleshooting |
+| [docs/ROADMAP.md](docs/ROADMAP.md) | Football mechanics the game has and lacks, experience ideas, and the online latency-fairness design |
 | [PLAN.md](PLAN.md) | The original plan, the review that fixed it, and build status |
 | [CHANGELOG.md](CHANGELOG.md) | What changed, by date |
 | [AGENTS.md](AGENTS.md), [football/AGENTS.md](football/AGENTS.md) | Detailed engineering notes for contributors and coding agents |

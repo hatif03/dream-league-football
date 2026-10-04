@@ -22,6 +22,23 @@ Defined in `src/client/index.css` as Tailwind v4 theme tokens.
 - **Sound.** `ui/sfx.ts` synthesises move, select, back, notify, tick and whistle with the Web Audio API (no audio files); a mute switch lives in Settings.
 - **Flags** come from the `flag-icons` package (the 48 nations used are bundled in `ui/flags.ts`).
 
+## Avatars
+
+Players pick one of 24 pre-made footballer avatars (`ui/avatars.tsx`): the pieces (skin, hair, kit, background) are chosen from the id, so there is nothing to download, and the id is stored on the server (`UserProfile.avatar`). The picker is on the sign-up screen (one is preselected) and behind the avatar on the profile. Avatars show in the header chip, the friends list, invites, the bell and the lobby.
+
+## Club, tutorial, install and sharing
+
+- **Club editor** (`/club`): crest shape, emblem and colours, club name, kit colours with swatches and a free colour picker, and a live preview. Saved with `profile/saveClub`.
+- **Tutorial** (`screens/match/Tutorial.tsx`): a coach card on the pitch that watches counters from the engine (`tutorialProbe`: distance run, sprint time, kicks by type) and advances as you do each thing.
+- **Install** (`ui/install.tsx`, `public/manifest.json`, icons made by `scripts/make-icons.mjs`): an install card in Settings (Chrome and Edge show a button; iPhone shows the Add to Home Screen steps).
+- **Result card** (`ui/resultCard.ts`): the score drawn on a canvas as a 1200×630 image.
+- **Leaderboard** (`/leaderboard`) and **achievements** (on the profile).
+- **Quick chat**: the Chat button at the bottom of an online match.
+
+## Notifications
+
+Toasts close themselves after their duration (invites after 10 s) through `ToastReaper`, because react-hot-toast pauses a toast while the pointer is over it and on a phone a tap counts as hovering forever.
+
 ## Navigation
 
 `ui/MenuNav.tsx` implements spatial focus: the arrow keys, the D-pad and the left stick move focus to the nearest focusable element in that direction; Enter or A activates; Esc or B goes back (any element marked `data-back`); Q/E or LB/RB switch tabs; mouse hover moves focus like a console cursor. Dialogs and menus set `data-nav-scope` so focus stays inside them.

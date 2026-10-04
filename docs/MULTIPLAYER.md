@@ -43,13 +43,16 @@ All frames are JSON text, identical over WebRTC and the relay (`src/client/net/p
 | host → guest | **snapshot** | ≈ 30/s, unreliable and unordered | Sender time and sequence, camera, ball (x, y, z, vx, vy, vz), one 16-number row per player on the pitch, who each side controls, score, match clock, HUD (messages, charge, stats, cards) |
 | guest → host | **input** | on change, plus a 250 ms heartbeat, reliable and ordered | Canonical key codes pressed and released |
 | both | **bye** (`{"k":"b"}`) | once | "I am leaving on purpose" |
-| both | heartbeat | 1/s | Keeps silence detection honest |
+| both | **emote** (`{"k":"e","c":3}`) | on demand, at most one per 1.2 s | Quick chat: `c` is the index of a phrase in `src/client/net/emotes.ts` |
+| both | **ping / pong** (`{"k":"p","t":…}` and `{"k":"o","t":…}`) | 1/s | Doubles as the heartbeat for silence detection and measures the round-trip time |
 
 A player row is `[x, y, vx, vy, facingX, facingY, anim, kick, dive, diveDir, slide, slideX, slideY, flags, squadIndex, team]` (`src/client/game/snapshot.ts`). Rows carry their squad index and team, so when a player is sent off the rows simply disappear and the guest matches the rest by identity, not position.
 
 **Mirroring.** The host's world has the host attacking right. The guest's view mirrors x so that the guest also attacks right, and the guest's keys go through the same code path as the host's own player (`flipWorld`, `runGuestSeat`, `SeatState`) inside the host's engine. The guest's controls therefore feel identical to the host's.
 
 ## Feel across latency
+
+- **Fair latency.** Each side measures the round trip (a smoothed ping, shown as a "ms" chip). The host holds back their own key presses by half of it (capped at 100 ms), which is how long the guest's presses take to reach the simulation, so neither player's input has a head start. Order of presses and releases is preserved, and it only applies to the host of a friend match. The guest still sees the match about 110 ms late plus half the round trip; see [ROADMAP.md](ROADMAP.md#latency-fairness-in-online-matches) for what this does and does not fix.
 
 - The guest renders about **110 ms in the past** and interpolates between snapshots, so 30 packets a second look smooth.
 - A jump larger than 260 px between snapshots is treated as a restart/teleport (kick-off, set piece), not a run.

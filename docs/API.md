@@ -44,6 +44,9 @@ Exact argument names are those of Serverpod's generated client (`football_client
 | `createProfile` | `displayName`, `acceptTerms` | `UserProfile` | Name: 3–16 of `A–Z a–z 0–9 _ -`, unique ignoring case; terms must be accepted |
 | `updateProfile` | `region?`, `favouriteNation?` | `UserProfile` | Nation id must be one of the 48 |
 | `record` | — | `RecordView` | Wins, draws, losses, abandoned, and `headToHead[]` per opponent (friend matches only) |
+| `setAvatar` | `avatar` | `UserProfile` | One of the 24 pre-made avatars (0–23); anything else is refused |
+| `saveSettings` | `json` | `UserProfile` | The player's settings as a JSON object (≤ 8 KB), so a new device starts with them. Returned in `UserProfile.settings` |
+| `saveClub` | `json` | `UserProfile` | The club crest and kit as a JSON object (≤ 2 KB), returned in `UserProfile.club` |
 | `deleteAccount` | — | — | Removes personal data; finished matches stay for the opponent as "Removed player" |
 
 ## tournament
@@ -71,7 +74,7 @@ A room that two players share before the match.
 | `leave` | `lobbyId` | — | A host leaving closes the room; a guest leaving frees the seat |
 | `rematch` | `lobbyId`, `clientVersion` | `LobbyView` | From a finished match: a fresh room with host and guest swapped and nations kept. Whoever asks first creates it; the other gets the same room |
 
-`LobbyView` = `{ lobby, hostName, guestName?, youAreHost }`. Lobby `status` is `open`, `live` or `closed`; an open room idle for 3 hours reads as closed.
+`LobbyView` = `{ lobby, hostName, hostAvatar?, guestName?, guestAvatar?, youAreHost }`. Lobby `status` is `open`, `live` or `closed`; an open room idle for 3 hours reads as closed.
 
 ## friendMatch
 
@@ -110,6 +113,13 @@ Friends are added by **exact display name**.
 | `chat/send` | `lobbyId`, `text` | — | Members of the room only; profanity is masked; 8 per 10 s |
 | `chat/list` | `lobbyId` | `ChatLine[]` | |
 | `report/create` | `targetUserId`, `matchId?`, `reason` | — | 5 per hour; stored in `player_report` for review |
+
+## rankings
+
+| Method | Arguments | Returns | Notes |
+| --- | --- | --- | --- |
+| `leaderboard` | `limit` (≤ 50) | `LeaderboardView` | `{ top: LeaderEntry[], you?, total }`. Points: 3 per friend-match win, 1 per draw, 25 per solo World Cup title. `you` carries the caller's true rank even outside the top. Computed from all finished matches and cached for 30 s (dropped when a match finishes or a World Cup is won) |
+| `achievements` | — | `AchievementView[]` | Twelve achievements with `done`, `progress` and `target`, derived from stored matches, runs, friends and profile |
 
 ## liveOps and admin
 

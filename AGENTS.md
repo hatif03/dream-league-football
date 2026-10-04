@@ -36,8 +36,9 @@ for how to work on the server. (An outdated template overview that used to close
   from the page host. Relay URL: `VITE_RELAY_URL`, else the page origin as ws(s).
 - MODES (routes, see `router.tsx`): `/` home, `/world-cup` (nation pick + run hub, needs sign-in), `/online`
   (hub + lobby, needs sign-in; `?join=CODE` joins a room, legacy `/?room=CODE` redirects), `/practice`,
-  `/match` (full-viewport pitch: `LocalMatch` for practice and World Cup incl. shootout, `FriendMatchStage`
-  for online), `/settings`, `/profile`. NOTE: every description of `HomePage.tsx` / "phase" state further
+  `/match` (full-viewport pitch: `LocalMatch` for practice, friendly and World Cup incl. shootout, `FriendMatchStage`
+  for online), `/settings`, `/profile`, `/club` (crest and kit editor), `/leaderboard`. `/practice` has Practice and an
+  11 v 11 friendly; the tutorial is `screens/match/Tutorial.tsx` driven by `PitchKickGame.tutorialProbe()`. NOTE: every description of `HomePage.tsx` / "phase" state further
   down is HISTORICAL — HomePage was replaced by these routed screens in October 2026.
 - SOLO WORLD CUP: server owns the run (`tournament/*`). Group stage then the real 2026 bracket
   (`tournament/knockout.dart`: r32Slots, feeders, `assignThirds` matching, tests in

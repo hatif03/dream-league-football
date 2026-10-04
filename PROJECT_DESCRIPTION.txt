@@ -1,0 +1,68 @@
+DREAM LEAGUE FOOTBALL
+
+An arcade, FIFA-style football game that runs in the browser, with a Serverpod back end for accounts, a persistent solo World Cup and live online matches against friends.
+
+Live: https://football.serverpod.space
+API: https://football.api.serverpod.space
+Code: https://github.com/hatif03/dream-league-football
+
+WHAT THE APP DOES
+
+Dream League Football is a full 11 v 11 football game drawn on an HTML canvas with a TV-style broadcast camera. It has the 48 nations of the 2026 World Cup, each with a real squad, kits and FIFA-style player ratings (pace, shooting, passing, dribbling, defending, physicality) that change how every player actually plays.
+
+There are three ways to play:
+
+1. Solo World Cup (signed in). Pick a nation and play the real 2026 draw: 12 groups, matchday by matchday. The server simulates the other games, builds the group tables with proper tie-breaks, draws the official Round-of-32 bracket (including the eight best third-placed teams) and takes you through the knockouts with extra time and a penalty shootout you take yourself. Every result is saved to your account and survives refreshes and new devices.
+
+2. Play a friend online (signed in). One tap creates a room. Share the 5-character code, a link, the phone share sheet or a QR code, or invite a friend from your friends list. Both players see joins, leaves, nation picks and readiness live, then a 3-2-1 count-in starts a match. One browser runs the simulation and streams it to the other; both players sign the final score, and the result and head-to-head record are stored. Leaving a match tells the opponent within about a tenth of a second and the server marks the match abandoned.
+
+3. Practice (no account needed). An open pitch with a keeper, no clock and no pressure.
+
+Also: an 11 v 11 friendly against the CPU, an interactive tutorial, a club crest and kit editor, 24 avatars, 12 achievements and a global leaderboard, quick chat in online matches, shareable result cards, settings that follow your account, and an installable app.
+
+Around the matches there are friends, blocks, invites, lobby chat, player reports, presence dots, a record with head-to-head, and account deletion. The football rules are real: offside, throw-ins, corners, goal kicks, fouls with free kicks and a four-man wall, penalties, yellow and red cards, extra time and shootouts, three CPU difficulty levels, a goalkeeper with dives and handling rules, charged shots and passes, through balls, slide tackles and contain.
+
+It plays on keyboard, controller (Gamepad API) or touch, with every input rebindable. The menus are console-style (arrows or D-pad, Enter/A, Esc/B) and the footer shows the buttons of the device you used last. On phones matches run in landscape with on-screen controls.
+
+HOW IT USES SERVERPOD
+
+The whole back end is one Serverpod 4.0.3 project (Dart, PostgreSQL) in the football/ folder, deployed on Serverpod Cloud as project "football".
+
+- Authentication: Serverpod's email identity provider with the JWT token manager. Sign-up uses an emailed verification code (sent through Serverpod Cloud's email service, branded "Dream League Football"), then a unique display name. Access tokens last 10 minutes and are refreshed by the web app.
+- Endpoints: profile, tournament, lobby, friendMatch, friends, chat, report, liveOps and admin. Every game endpoint requires login. The web app calls them as plain JSON (POST /<endpoint>/<method> with a bearer token).
+- Database and models: 12 game tables defined as .spy.yaml models (profiles, tournaments and fixtures, lobbies, friend matches, friendships, blocks, invites, chat, reports, audit log, maintenance switch) with 9 versioned migrations applied at boot. Local development and tests use Serverpod's embedded PostgreSQL, so Docker is not needed.
+- Trust between two players: the match runs in one player's browser, so the server makes the result trustworthy. Each player posts a signed claim of the score; the server stores the match only when both claims are identical, written in a transaction with a row lock (LockMode.forUpdate) so two near-simultaneous claims never overwrite each other. Mismatches, one-sided claims and abandoned matches are handled by explicit rules and unit tests.
+- Peer-to-peer introduction: the WebRTC offer and answer are stored on the FriendMatch row, so Serverpod is the signalling channel between the two browsers.
+- Relay fallback: a Relic web-server route, /relay/<matchId>, is a WebSocket that authenticates both players with their JWT and forwards match frames when a direct connection fails.
+- Web hosting: the same Serverpod web server serves the built web app with a single-page fallback, so the site, the relay and the API need no CORS or cookie setup.
+- Solo World Cup logic on the server: group tables with head-to-head tie-breaks, matchday-limited simulation of the other games, the official 2026 knockout bracket with third-placed team assignment (tested against all 495 possible combinations), and idempotent result submission.
+- Social and operations: friends by exact name, blocks, invites, presence (lastSeenAt), rate limiting, a profanity mask, a maintenance switch, suspensions and operator endpoints gated by the adminUserIds password.
+- Serverpod Cloud: one-command deploys with scloud, managed database, TLS and email, and secrets set with scloud password.
+- Tests: dart test for group logic, the bracket and result-claim resolution, plus HTTP smoke tests and real-browser end-to-end tests that drive the app against the local Serverpod server.
+
+HOW IT RELATES TO FLUTTER
+
+To be accurate: the user interface is not written in Flutter. The game and every screen are a React 19 / TypeScript web app (Vite, Tailwind) with a hand-written canvas game engine, chosen because the match needs a real-time canvas renderer and runs in any browser, including phones, with no install.
+
+Flutter is part of the project as the Dart toolchain behind Serverpod: the Serverpod server is Dart and builds and runs on the Flutter SDK's Dart, the project is a Dart workspace (football_server and football_client), and Serverpod generates a Dart client package (football_client) from the server's models and endpoints. The web app talks to the same endpoints with plain JSON instead of that generated client, so football_client is generated and kept up to date but not used by the UI. A Flutter front end could be added on top of the same server without changing it.
+
+HOW TO TRY IT
+
+1. Open https://football.serverpod.space. Practice works immediately without an account.
+2. To use the World Cup or play a friend, create an account (an emailed code confirms your address), choose a player name, and pick a nation.
+3. For an online match, one player opens Online, creates a room and shares the code or link; the other opens it on any device. Both choose different nations, press "I'm ready", and play.
+
+Run it yourself (README.md and docs/DEVELOPMENT.md have the details):
+  npm install
+  npm run dev                                   (web app on :5173)
+  cd football/football_server
+  cp config/passwords.example.yaml config/passwords.yaml   (fill in secrets)
+  dart bin/main.dart --apply-migrations --role monolith    (server on :8080, no Docker needed)
+
+STATE OF THE SUBMISSION
+
+Working and verified: the live site loads over the Serverpod web host with working deep links and cross-origin API calls; the server unit tests pass (15/15); the HTTP smoke tests pass; and real-browser tests pass for sign-up through a World Cup match, a knockout game with extra time and a penalty shootout, controller and touch input, and two real browsers playing a friend match end to end (direct WebRTC, relay fallback, leaving, tab-close abandonment and invites).
+
+Known limits, stated plainly: production sign-up sends a real email, so the live sign-up flow was not scripted against the deployed site (it is tested locally, where the code is printed to the console); layouts were checked at emulated phone sizes, not on physical phones; a full match over the production relay has not been timed; and there is no leaderboard, spectating or replays yet.
+
+Documentation: README.md, docs/SERVERPOD.md (how Serverpod is used), docs/API.md (every endpoint), docs/ARCHITECTURE.md, docs/MULTIPLAYER.md, docs/GAMEPLAY.md, docs/UI.md, docs/DEVELOPMENT.md, CHANGELOG.md and PLAN.md.

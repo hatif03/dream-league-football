@@ -52,12 +52,13 @@ football/
 │   │   ├── tournament/          # solo World Cup: group logic, knockout bracket, endpoint
 │   │   ├── friend/              # lobbies, friend matches, claims, relay route
 │   │   ├── social/              # friends, blocks, invites, chat, reports, presence helpers
+│   │   ├── rankings/            # leaderboard and achievements
 │   │   ├── admin/               # public maintenance status + operator tools
 │   │   ├── data/world_cup_data.dart   # GENERATED from the TypeScript teams
 │   │   ├── util/rate_limit.dart # in-memory token bucket
 │   │   ├── generated/           # Serverpod code generator output (never edit)
 │   │   └── **/*.spy.yaml        # model definitions
-│   ├── migrations/              # 7 generated migrations (+ registry)
+│   ├── migrations/              # 9 generated migrations (+ registry)
 │   ├── config/                  # development / staging / production / test + passwords
 │   ├── test/                    # unit tests
 │   ├── web/spa/                 # the built React app (npm run build:web), served by the web server
@@ -121,6 +122,7 @@ Errors thrown on the server as `GameException` (a model in `game_exception.spy.y
 | `lobby` | Rooms: create, join by code, nation, ready, rematch, leave | [API.md](API.md#lobby) |
 | `friendMatch` | Handshake, connected, leave, signed result, history | [API.md](API.md#friendmatch) |
 | `friends` | Friend list, requests, blocks, invites, presence | [API.md](API.md#friends) |
+| `rankings` | Leaderboard and achievements, computed from stored matches and runs | [API.md](API.md#rankings) |
 | `chat`, `report` | Lobby chat, player reports | [API.md](API.md#chat-and-report) |
 | `liveOps`, `admin` | Maintenance status; operator tools | [API.md](API.md#liveops-and-admin) |
 
@@ -134,7 +136,7 @@ Models are `.spy.yaml` files next to the code that uses them. `serverpod generat
 
 | Table | Model | What it stores |
 | --- | --- | --- |
-| `user_profile` | `UserProfile` | One per account: unique `displayName` (+ lower-cased `displayNameLower` with a unique index), `favouriteNation`, `termsAcceptedAt`, `bannedUntil`, `lastSeenAt` (presence) |
+| `user_profile` | `UserProfile` | One per account: unique `displayName` (+ lower-cased `displayNameLower` with a unique index), `favouriteNation`, `avatar` (0–23, one of the pre-made avatars), `settings` and `club` (JSON the player saved), `termsAcceptedAt`, `bannedUntil`, `lastSeenAt` (presence) |
 | `tournament` | `Tournament` | A solo run: owner, nation, `status` (`group`, `r32`, `r16`, `qf`, `sf`, `final`, `eliminated`, `champion`) |
 | `tournament_fixture` | `TournamentFixture` | Every game of the run (72 group + knockout ties): teams, score, shootout goals, `decidedBy` (`90`/`et`/`pens`), `playedByUser`, idempotency nonce |
 | `lobby` | `Lobby` | A room: unique 5-character `code`, host and guest, nations, ready flags, `status` (`open`/`live`/`closed`), `clientVersion`, link to the match and to a rematch room |
@@ -155,7 +157,7 @@ Users are referenced by their auth user id as a plain `String` (the auth module'
 
 ### Migrations
 
-`football_server/migrations/` holds seven migrations (the schema, then additive changes such as `lastSeenAt`). The checked-in `migration_registry.txt` lists them. Rules:
+`football_server/migrations/` holds nine migrations (the schema, then additive changes such as `lastSeenAt` and `avatar`). The checked-in `migration_registry.txt` lists them. Rules:
 
 - Always create a migration after changing a model that has a `table`: `serverpod create-migration` (add `--force` for destructive changes).
 - Never edit generated files. A migration's `migration.sql` may be hand-edited only to avoid data loss, and the schema it ends with must still equal `definition.sql`.

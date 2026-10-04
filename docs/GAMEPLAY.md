@@ -6,7 +6,8 @@
 | --- | --- | --- |
 | **World Cup** (solo) | required | One nation, the real 2026 draw, group stage then knockouts against the CPU. Saved on the server |
 | **Play a friend** (online) | required | Head-to-head against another person, by room code, link, QR or invite. Result and head-to-head record saved |
-| **Practice** | not needed | Four team-mates and a goalkeeper on an open pitch. No clock, no rules, no pressure |
+| **Practice** | not needed | Four team-mates and a goalkeeper on an open pitch. No clock, no rules, no pressure. Includes an interactive **tutorial** |
+| **Friendly** (11 v 11) | not needed | A full match against the CPU with any two teams, half-time and your formation. Nothing is saved; at full time you can play again or share the score as a picture |
 
 ### Solo World Cup
 
@@ -15,11 +16,20 @@
 - **Qualifying.** The top two of every group and the **eight best third-placed teams** go through to the Round of 32. The eight third-placed teams are placed in the official bracket slots by matching each slot's allowed groups (unit-tested for all 495 combinations).
 - **Knockouts.** Round of 32, Round of 16, quarter-finals, semi-finals, final, following the real bracket. A level game plays **extra time** (one extra period: one real minute, 30 displayed minutes), and if still level a **penalty shootout** that you play: you take your kicks (aim with the arrows, shoot with `D`) and keep goal for the CPU's. The other ties of the round are simulated.
 - **Outcome.** Champion, or the round you were knocked out in. Start another run any time; abandoning a run is a deliberate button.
-- **Real time vs match time.** A match is **3 real minutes** and displays 90 football minutes (the clock counts up from 0:00 to 90:00). Extra time adds one real minute (30 displayed).
+- **Real time vs match time.** A match is **3 real minutes** by default (choose 3, 5 or 8 in *Settings → Gameplay*) and displays 90 football minutes (the clock counts up from 0:00 to 90:00). Extra time adds a third of that again. There is a **half-time break** at 45': play stops with a banner, everyone returns to the kick-off spots, and the other side kicks off the second half.
+- **Formation.** Before a World Cup match, pick how your team lines up: 4-3-3, 4-2-3-1, 4-4-2, 3-5-2 or 3-4-3, with a pitch preview. The choice is remembered. (It does not apply to practice or to friend matches yet.)
+
+### Friendly, tutorial and your club
+
+- **Friendly:** *Practice → 11 v 11 friendly*. Same rules as a World Cup group match (offside, fouls, cards, half-time) but nothing is saved.
+- **Tutorial:** *Practice → Learn the basics* (offered to new players). A coach on the pitch gives one task at a time (run, sprint, pass, through or long ball, shoot, score, defend) and moves on when you do it. The wording follows your device (keys, controller or touch).
+- **Your club:** *Profile → Design your club*. Pick a crest (shape, emblem, colours), a name and a kit; tick "wear this kit" to use it in solo matches and friendlies. It is saved to your account.
+- **Achievements and leaderboard:** twelve achievements (friend matches, streaks, World Cup progress, penalties, big wins, friends, avatar and club) on your profile. The leaderboard ranks players by points: 3 per friend-match win, 1 per draw, 25 per World Cup title.
+- **Share a result:** the full-time screen has "Share result": a picture of the score (the share sheet on phones, a download on a computer).
 
 ### Play a friend
 
-See [MULTIPLAYER.md](MULTIPLAYER.md) for how it works. As a player: *Online → Create a room*; share the code, link or QR; your friend joins; each picks a nation (your favourite nation is pre-selected); both press **I'm ready**; a 3-2-1 count-in starts the match. The nations must differ. You can chat in the room. At full time you see possession, shots, on target, saves and cards, and can start a **rematch** (host and guest swap, nations kept). Leaving a match tells your friend immediately and counts as abandoned for you, not as a win for them.
+See [MULTIPLAYER.md](MULTIPLAYER.md) for how it works. As a player: *Online → Create a room*; share the code, link or QR; your friend joins; each picks a nation (your favourite nation is pre-selected); both press **I'm ready**; a 3-2-1 count-in starts the match. The nations must differ. You can chat in the room, and during the match a **Chat** button sends quick phrases ("Good luck!", "Nice one!", "GG", 👏 …) that your opponent sees for three seconds. At full time you see possession, shots, on target, saves and cards, and can start a **rematch** (host and guest swap, nations kept). Leaving a match tells your friend immediately and counts as abandoned for you, not as a win for them.
 
 ## Controls
 
@@ -54,7 +64,7 @@ Defaults. Every key can be changed in **Settings**.
 - **Goalkeepers** come off their line, dive for shots they must reach, catch weak shots and parry hard ones. A keeper may only handle the ball inside his own penalty area, and not from a team-mate's deliberate pass (he plays it with his feet instead). He holds a caught ball briefly before distributing, and the CPU keeper kicks long to an open team-mate.
 - **Height.** The ball has a height: lofted passes and strong shots fly, and a ball above head height cannot be intercepted. A lofted pass cannot be intercepted in the air by anyone but its target.
 - **Possession and tackling.** The nearest player in reach gets the ball, with a short protection after a clean tackle. A defender in body contact with a carrier slowly wins the ball; approaching from the side or front is much faster than from directly behind.
-- **Clock.** 90 displayed minutes in 3 real minutes. At full time friend and World Cup group matches end; a drawn knockout goes to extra time and penalties.
+- **Clock.** 90 displayed minutes in 3 real minutes (or the length you chose), with half-time. At full time friend and World Cup group matches end; a drawn knockout goes to extra time and penalties.
 
 ## Player ratings
 

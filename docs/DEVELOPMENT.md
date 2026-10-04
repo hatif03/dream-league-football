@@ -81,8 +81,10 @@ export SERVER_LOG="$TEMP/sp_out.log"
 | `node scripts/e2e-knockout.mjs` | server + Vite | A Round-of-32 game through extra time and a penalty shootout; the CPU takes its own penalties |
 | `node scripts/e2e-input.mjs` | Vite | Controller (simulated gamepad) and touch controls |
 | `node scripts/e2e-friend.mjs [--relay\|--leave\|--abandon\|--invite]` | server + Vite | Two real browsers play a friend match end to end, in each of the situations in [MULTIPLAYER.md](MULTIPLAYER.md#testing-the-netcode) |
+| `node scripts/e2e-extras.mjs` | server + Vite | The friendly (11 v 11, half-time, share image), tutorial, club editor and worn kit, settings following the account, the app manifest and the leaderboard page |
 | `node scripts/e2e-loopback.mjs` | Vite | Host and guest in one page: fuzzed streams, fouls, penalties, cards, hidden-tab ticks |
 | `node scripts/check-live.mjs` | internet | The deployed site: loads, deep links work, the API is reachable cross-origin. `APP=https://football.serverpod.space` |
+| `node scripts/make-icons.mjs` | Chrome | Regenerates the app icons in `src/client/public` (already committed) |
 | `node scripts/shots.mjs`, `shots-landscape.mjs` | server + Vite | Screenshots of every screen for design review |
 
 The scripts launch Playwright against the installed Chrome or Edge (no browser download). Screenshots go to `.e2e-shots/` (git-ignored).
