@@ -115,12 +115,10 @@ export function MenuNav({ enabled }: { enabled: boolean }) {
     const onClick = (e: MouseEvent) => {
       if ((e.target as HTMLElement | null)?.closest('.tile, .btn, [data-sfx]')) sfx.select();
     };
-    const onFocusIn = () => noteDevice('keyboard');
 
     window.addEventListener('keydown', onKey);
     document.addEventListener('pointerover', onOver, { passive: true });
     document.addEventListener('click', onClick, true);
-    document.addEventListener('focusin', onFocusIn);
 
     // Gamepad: edges from the D-pad / left stick with key-repeat, A confirms, B backs out.
     let raf = 0;
@@ -164,7 +162,6 @@ export function MenuNav({ enabled }: { enabled: boolean }) {
       window.removeEventListener('keydown', onKey);
       document.removeEventListener('pointerover', onOver);
       document.removeEventListener('click', onClick, true);
-      document.removeEventListener('focusin', onFocusIn);
       cancelAnimationFrame(raf);
     };
   }, [enabled]);

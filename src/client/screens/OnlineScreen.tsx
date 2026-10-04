@@ -41,33 +41,59 @@ export default function OnlineScreen() {
     getLiveStatus().then(setLive).catch(() => {});
   }, []);
 
-  // Resume the room after a reload, or join the code from a shared link.
+  // Join the code from a shared link or an invite toast, even when this screen is already open
+  // (the Join button navigates to /online?join=CODE from anywhere, including from inside a room).
   const joinCode = params.get('join');
+  const handledJoin = useRef('');
+  const dialog = useDialog();
   useEffect(() => {
-    if (session.status !== 'in' || tried.current || view) return;
+    if (!joinCode) handledJoin.current = '';
+  }, [joinCode]);
+  useEffect(() => {
+    if (session.status !== 'in' || !joinCode || handledJoin.current === joinCode) return;
+    handledJoin.current = joinCode;
+    tried.current = true;
+    setParams({}, { replace: true });
+    const code = joinCode.toUpperCase().slice(0, 5);
+    (async () => {
+      try {
+        if (view) {
+          if (view.lobby.code === code) return;
+          const ok = await dialog.confirm({ title: 'Switch rooms?', body: 'You are in a room already. Leave it and join the new one?', confirmLabel: 'Switch rooms' });
+          if (!ok) return;
+          await leaveLobby(view.lobby.id).catch(() => {});
+          setView(null);
+        }
+        setBusy(true);
+        setView(await joinLobby(code));
+      } catch (e) {
+        toast.error((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.status, joinCode]);
+
+  // Resume the room after a reload.
+  useEffect(() => {
+    if (session.status !== 'in' || tried.current || view || joinCode) return;
     tried.current = true;
     (async () => {
       try {
-        if (joinCode) {
-          setBusy(true);
-          setParams({}, { replace: true });
-          setView(await joinLobby(joinCode.toUpperCase().slice(0, 5)));
-          return;
-        }
         const id = sessionStorage.getItem(KEY);
         if (id) {
           const v = await getLobby(id);
           if (v.lobby.status === 'open') setView(v);
           else remember(null);
         }
-      } catch (e) {
-        if (joinCode) toast.error((e as Error).message);
+      } catch {
         remember(null);
       } finally {
         setBusy(false);
       }
     })();
-  }, [session.status, joinCode, view, setParams]);
+  }, [session.status, joinCode, view]);
 
   useEffect(() => remember(view?.lobby.id ?? null), [view?.lobby.id]);
 
@@ -320,9 +346,9 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
       </div>
 
       <div className="grid items-stretch gap-3 md:grid-cols-[1fr_auto_1fr]">
-        <SeatCard name={myName} you host={youAreHost} nation={myNation} away={!youAreHost} ready={myReady} onPick={() => setPick(true)} />
+        <SeatCard name={myName} avatar={youAreHost ? view.hostAvatar : view.guestAvatar} you host={youAreHost} nation={myNation} away={!youAreHost} ready={myReady} onPick={() => setPick(true)} />
         <div className="t-display flex items-center justify-center text-5xl text-mist-500 md:text-7xl">VS</div>
-        <SeatCard name={theirName ?? undefined} host={!youAreHost} nation={theirNation} away={youAreHost} ready={theirReady} />
+        <SeatCard name={theirName ?? undefined} avatar={youAreHost ? view.guestAvatar : view.hostAvatar} host={!youAreHost} nation={theirNation} away={youAreHost} ready={theirReady} />
       </div>
 
       <div className="mt-4 flex flex-col items-center gap-2">
@@ -381,13 +407,13 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
   );
 }
 
-function SeatCard({ name, you, host, nation, away, ready, onPick }: { name?: string; you?: boolean; host?: boolean; nation?: string | null; away: boolean; ready: boolean; onPick?: () => void }) {
+function SeatCard({ name, avatar, you, host, nation, away, ready, onPick }: { name?: string; avatar?: number | null; you?: boolean; host?: boolean; nation?: string | null; away: boolean; ready: boolean; onPick?: () => void }) {
   const team = teamById(nation ?? '');
   const empty = !name;
   return (
     <section className="glass relative overflow-hidden p-4 md:p-5" style={{ borderTop: `4px solid ${ready ? '#3df08a' : (team?.color ?? '#7a75b8')}` }} aria-label={you ? 'Your side' : 'Opponent'}>
       <div className="mb-3 flex items-center gap-3">
-        {empty ? <span className="skeleton h-9 w-9 rounded-full" /> : <Avatar name={name} online size={40} />}
+        {empty ? <span className="skeleton h-9 w-9 rounded-full" /> : <Avatar name={name} avatar={avatar} online size={40} />}
         <div className="min-w-0 flex-1">
           <div className="t-label">{you ? 'You' : 'Opponent'}{host ? ' · Host' : ''}</div>
           <div className="truncate font-display text-2xl font-bold uppercase text-white">{empty ? 'Waiting for a friend…' : name}</div>

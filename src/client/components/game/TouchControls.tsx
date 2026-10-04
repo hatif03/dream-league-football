@@ -25,6 +25,7 @@ export function TouchControls({ sink, layout }: { sink: () => KeySink | null; la
   const press = (code: string) => {
     if (down.current.has(code)) return;
     down.current.add(code);
+    if (!code.startsWith('Arrow')) navigator.vibrate?.(8); // a light tick on action buttons
     sink()?.pressKey(code);
   };
   const release = (code: string) => {

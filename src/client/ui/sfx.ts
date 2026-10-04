@@ -67,6 +67,11 @@ export const sfx = {
     tone(3050, 0.5, 'sine', 0.03, 0.02, 2800);
   },
   goal: () => {
+    try {
+      navigator.vibrate?.([60, 40, 60]); // a buzz on phones
+    } catch {
+      /* not supported */
+    }
     [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.22, 'triangle', 0.06, i * 0.09));
   },
 };

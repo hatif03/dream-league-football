@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useRef, useState, type R
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+import { toast, useToasterStore } from 'react-hot-toast';
 import { useSession } from '@/client/api/session';
 import { acceptFriend, getFriends, removeFriend, type FriendsView, type Invite, type Person } from '@/client/api/social';
 import { Avatar } from './controls';
@@ -16,6 +16,29 @@ interface Value {
 }
 const Ctx = createContext<Value>({ friends: undefined, invites: [], requests: [], count: 0 });
 export const useNotifications = () => useContext(Ctx);
+
+/**
+ * Closes every toast after its own duration. react-hot-toast pauses a toast while the pointer is over it,
+ * and on a phone a tap counts as "over" forever, so toasts used to stay on screen. This timer ignores that.
+ */
+export function ToastReaper() {
+  const { toasts } = useToasterStore();
+  const timers = useRef(new Map<string, number>());
+  useEffect(() => {
+    for (const t of toasts) {
+      if (!t.visible || timers.current.has(t.id)) continue;
+      const ms = typeof t.duration === 'number' && Number.isFinite(t.duration) ? t.duration : 4000;
+      timers.current.set(
+        t.id,
+        window.setTimeout(() => {
+          toast.dismiss(t.id);
+          timers.current.delete(t.id);
+        }, Math.min(ms, 10_000) + 300),
+      );
+    }
+  }, [toasts]);
+  return null;
+}
 
 /** Friends, requests and invites for the whole app: one poll, toasts as things arrive. */
 export function NotificationsProvider({ children }: { children: ReactNode }) {
@@ -44,7 +67,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           toast.custom(
             (t) => (
               <div className={`glass-solid flex items-center gap-4 px-4 py-3 shadow-xl shadow-black/50 ${t.visible ? 'animate-slide-up' : 'opacity-0'}`} role="status">
-                <Avatar name={i.fromName} size={40} />
+                <Avatar name={i.fromName} avatar={i.fromAvatar} size={40} />
                 <div>
                   <div className="t-label">Invite</div>
                   <div className="font-display text-lg font-bold uppercase text-white">{i.fromName} wants to play</div>
@@ -60,7 +83,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                 </button>
               </div>
             ),
-            { duration: 20_000, id: `invite-${i.lobbyId}` },
+            { duration: 10_000, id: `invite-${i.lobbyId}` },
           );
         }
       }
@@ -121,14 +144,14 @@ export function NotificationBell() {
           {count === 0 && <p className="px-2 py-4 text-center font-body text-sm text-mist-400">Nothing new.</p>}
           {invites.map((i) => (
             <div key={i.lobbyId} className="flex items-center gap-3 rounded p-2 hover:bg-white/5">
-              <Avatar name={i.fromName} />
+              <Avatar name={i.fromName} avatar={i.fromAvatar} />
               <span className="flex-1 font-body text-sm text-white"><b>{i.fromName}</b> invited you to a match</span>
               <button className="btn btn-primary btn-sm" onClick={() => { setOpen(false); navigate(`/online?join=${i.code}`); }}><span>Join</span></button>
             </div>
           ))}
           {requests.map((p) => (
             <div key={p.userId} className="flex items-center gap-3 rounded p-2 hover:bg-white/5">
-              <Avatar name={p.name} />
+              <Avatar name={p.name} avatar={p.avatar} />
               <span className="flex-1 font-body text-sm text-white"><b>{p.name}</b> wants to be friends</span>
               <button className="btn btn-primary btn-sm" onClick={async () => refresh(await acceptFriend(p.userId))}><span>Accept</span></button>
               <button className="btn btn-sm" onClick={async () => refresh(await removeFriend(p.userId))}><span>No</span></button>
