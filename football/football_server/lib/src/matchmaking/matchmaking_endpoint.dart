@@ -76,7 +76,7 @@ class MatchmakingEndpoint extends Endpoint {
     if (mine.lobbyId != null) {
       // Found: hand over the room and drop this player's queue entry.
       final lobby = await Lobby.db.findById(session, mine.lobbyId!);
-      await QueueEntry.db.deleteRow(session, mine);
+      await QueueEntry.db.deleteWhere(session, where: (q) => q.id.equals(mine.id!)); // idempotent: a push and a poll can ask at once
       if (lobby != null) {
         return QueueStatus(searching: false, waitedSecs: 0, mode: mine.mode, queued: 0, lobby: await buildLobbyView(session, lobby, userId));
       }

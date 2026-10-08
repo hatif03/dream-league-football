@@ -7,7 +7,7 @@ import '../auth/current_user.dart';
 import '../generated/protocol.dart';
 import '../util/rate_limit.dart';
 
-const _maxImage = 400 * 1024;
+const _maxImage = 2 * 1024 * 1024;
 const _storage = 'public';
 
 /// Sharing a result as a link. The picture of the score is kept in Serverpod's cloud storage and the link
@@ -17,7 +17,7 @@ class ShareEndpoint extends Endpoint {
   @override
   bool get requireLogin => true;
 
-  /// Stores a result image (a PNG sent as base64, at most 400 KB) and returns the link id and the image's public URL.
+  /// Stores a result image (a PNG sent as base64, at most 2 MB) and returns the link id and the image's public URL.
   Future<ShareLink> createResult(Session session, String pngBase64, String title, String description) async {
     final profile = await requireProfile(session);
     rateLimit(profile.userId, 'share.create', max: 12, window: const Duration(hours: 1));
@@ -33,7 +33,7 @@ class ShareEndpoint extends Endpoint {
     // A PNG starts with these eight bytes; anything else is refused so only pictures end up public.
     const magic = [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
     if (bytes.length > _maxImage || bytes.length < 100 || !List.generate(8, (i) => bytes[i] == magic[i]).every((b) => b)) {
-      throw GameException(message: 'The image must be a PNG under 400 KB.');
+      throw GameException(message: 'The image must be a PNG under 2 MB.');
     }
 
     final row = await SharedResult.db.insertRow(

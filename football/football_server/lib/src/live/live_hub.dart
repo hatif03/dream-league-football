@@ -37,7 +37,7 @@ class LiveHub {
   /// Tells each of [userIds] (nulls and duplicates are skipped) that [topic] changed.
   /// Topics: friends, lobby, chat, match, duel, queue. [id] is the room or match concerned.
   void notify(Iterable<String?> userIds, String topic, [String? id]) {
-    final text = jsonEncode({'t': topic, if (id != null) 'id': id});
+    final text = jsonEncode({'t': topic, 'id': ?id});
     for (final u in userIds.whereType<String>().toSet()) {
       final set = _sockets[u];
       if (set == null) continue;
