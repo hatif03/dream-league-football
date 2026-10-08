@@ -3,7 +3,8 @@ import { useSession } from './session';
 import { getCurrentRun } from './tournament';
 import { getRecord } from './social';
 import { matchHistory } from './friend';
-import { getAchievements, getLeaderboard } from './rankings';
+import { getAchievements, getLeaderboard, type LeaderBy } from './rankings';
+import { getDailyChallenge } from './duel';
 
 /** The signed-in player's solo World Cup run (null if none). */
 export function useRun() {
@@ -26,7 +27,12 @@ export function useAchievements() {
   return useQuery({ queryKey: ['achievements'], queryFn: getAchievements, enabled: signedIn, staleTime: 30_000 });
 }
 
-export function useLeaderboard(limit = 25) {
+export function useLeaderboard(limit = 25, by: LeaderBy = 'rating') {
   const signedIn = useSession().status === 'in';
-  return useQuery({ queryKey: ['leaderboard', limit], queryFn: () => getLeaderboard(limit), enabled: signedIn, staleTime: 20_000 });
+  return useQuery({ queryKey: ['leaderboard', limit, by], queryFn: () => getLeaderboard(limit, by), enabled: signedIn, staleTime: 20_000 });
+}
+
+export function useDailyChallenge() {
+  const signedIn = useSession().status === 'in';
+  return useQuery({ queryKey: ['daily'], queryFn: getDailyChallenge, enabled: signedIn, staleTime: 30_000 });
 }

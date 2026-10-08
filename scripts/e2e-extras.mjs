@@ -42,6 +42,7 @@ const open = async (tag = '') => {
 const { ctx, page } = await open();
 await page.goto(`${APP}/practice`);
 await page.getByRole('radio', { name: '11 v 11 friendly' }).click();
+await page.getByLabel(/If it is level after 90/).uncheck(); // this run wants a plain full time
 await page.getByRole('button', { name: /Start friendly/ }).click();
 await page.getByRole('button', { name: /Kick off/ }).click();
 await page.waitForFunction(() => window.__game?.current);
@@ -52,10 +53,47 @@ await page.getByText(/half time/i).first().waitFor({ timeout: 8000 });
 await page.waitForTimeout(3000);
 await page.evaluate(() => { window.__game.current.elapsed = 179.7; });
 await page.getByRole('button', { name: 'Play again' }).waitFor({ timeout: 20000 });
-const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), page.getByRole('button', { name: 'Share result' }).click()]);
-assert.match(dl.suggestedFilename(), /\.png$/);
-await dl.saveAs('.e2e-shots/result-card.png');
-console.log('friendly + share card ok');
+// Signed in on a computer: the card is stored with Serverpod and a link to its preview page is copied.
+await ctx.grantPermissions(['clipboard-read', 'clipboard-write']);
+await page.getByRole('button', { name: 'Share result' }).click();
+await page.getByText(/Link copied/).waitFor({ timeout: 15000 });
+const link = await page.evaluate(() => navigator.clipboard.readText());
+assert.match(link, /\/r\/[0-9a-f-]{36}$/);
+const preview = await (await fetch(link)).text();
+assert.match(preview, /og:title/);
+const img = preview.match(/og:image" content="([^"]+)"/)[1].replace(/&amp;/g, '&');
+const imgRes = await fetch(img);
+assert.equal(imgRes.status, 200, 'the stored picture is public');
+assert.equal(imgRes.headers.get('content-type'), 'image/png');
+console.log('friendly + share link ok');
+await page.getByRole('button', { name: 'Back' }).click();
+
+// ---- a standalone penalty shootout, played to the end --------------------------------------------
+await page.goto(`${APP}/practice`);
+await page.getByRole('radio', { name: 'Penalty shootout' }).click();
+await page.getByRole('button', { name: /Start shootout/ }).click();
+await page.getByRole('button', { name: /Kick off/ }).click();
+await page.waitForFunction(() => window.__shoot?.current);
+{
+  const t0 = Date.now();
+  let last = null;
+  while (Date.now() - t0 < 150000) {
+    const st = await page.evaluate(() => window.__shoot?.current?.snapshotState() ?? null);
+    if (!st) { if (last) break; await page.waitForTimeout(150); continue; }
+    last = st;
+    if (st.phase === 'done') break;
+    if (st.phase === 'aim' && st.turn === 'home') {
+      await page.keyboard.down('ArrowUp'); await page.waitForTimeout(250); await page.keyboard.up('ArrowUp');
+      await page.keyboard.down('KeyD'); await page.waitForTimeout(220); await page.keyboard.up('KeyD');
+    } else if (st.phase === 'aim' && st.turn === 'away') {
+      await page.keyboard.down('ArrowDown'); await page.waitForTimeout(2600); await page.keyboard.up('ArrowDown');
+    }
+    await page.waitForTimeout(150);
+  }
+  assert.ok(last, 'the shootout ran');
+}
+await page.getByRole('button', { name: 'Play again' }).waitFor({ timeout: 20000 });
+console.log('penalty mode ok');
 await page.getByRole('button', { name: 'Back' }).click();
 
 // ---- the tutorial moves on as you do each thing ------------------------------------------------

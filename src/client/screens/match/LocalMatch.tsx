@@ -18,6 +18,8 @@ import { MenuNav } from '@/client/ui/MenuNav';
 import { ChargeBar, MatchHud } from '@/client/ui/MatchHud';
 import { useSettings } from '@/client/ui/settings';
 import { sfx } from '@/client/ui/sfx';
+import { crowd } from '@/client/ui/crowd';
+import { CommentaryStrip, useCommentary } from '@/client/ui/Commentary';
 import { ROUND_NAMES, submitResult, type TournamentFixture } from '@/client/api/tournament';
 import { CornerButtons, FormationPicker, IntroCard, MatchStage, PauseMenu, ResultPanel, RotatePrompt } from './shared';
 import { usePauseKeys } from './usePause';
@@ -36,9 +38,12 @@ export function LocalMatch({
   fixture,
   tournamentId,
   tutorial,
+  decide,
   onExit,
 }: {
-  kind: 'practice' | 'worldcup' | 'friendly';
+  kind: 'practice' | 'worldcup' | 'friendly' | 'penalties';
+  /** Friendly: a level game goes to extra time and then penalties, like a knockout. */
+  decide?: boolean;
   /** Practice with the coach on the pitch. */
   tutorial?: boolean;
   home: TeamData;
@@ -57,9 +62,9 @@ export function LocalMatch({
   const shootRef = useRef<PenaltyShootout | null>(null);
   const dialog = useDialog();
   const qc = useQueryClient();
-  const { bindings, pad, touch, difficulty, matchSecs } = useSettings();
+  const { bindings, pad, touch, difficulty, matchSecs, replays, commentary } = useSettings();
   const [formation, setFormation] = useState<string | null>(() => loadFormation());
-  const knockout = !!fixture && fixture.round !== 'group';
+  const knockout = (!!fixture && fixture.round !== 'group') || (kind === 'friendly' && !!decide);
 
   const [stage, setStage] = useState<Stage>('intro');
   const [paused, setPaused] = useState(false);
@@ -71,12 +76,22 @@ export function LocalMatch({
   const pensRef = useRef<{ home: number; away: number } | null>(null);
   const nonce = useRef(crypto.randomUUID());
   const lastMsg = useRef('');
+  const { line, push } = useCommentary(home, away, commentary && kind !== 'practice');
+  const pushLine = useRef(push);
+  pushLine.current = push;
 
   // Build the engine up front and show the kickoff formation behind the intro card.
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     setHud(EMPTY_HUD);
+    if (kind === 'penalties') {
+      // No match to simulate: the shootout game starts straight from the intro card.
+      pensRef.current = null;
+      setShoot(null);
+      setStage(gameKey === 0 ? 'intro' : 'shootout');
+      return;
+    }
     setStage(gameKey === 0 ? 'intro' : 'playing');
     let game: PitchKickGame;
     if (kind === 'practice') {
@@ -84,7 +99,17 @@ export function LocalMatch({
       const pAway: TeamData = { ...away, players: away.players.slice(0, 1), kickoffFwd: 0 };
       game = new PitchKickGame(canvas, setHud, pHome, pAway, { practice: true, bindings, difficulty });
     } else {
-      game = new PitchKickGame(canvas, setHud, applyFormation(home, formation), away, { bindings, knockout, difficulty, matchSecs });
+      game = new PitchKickGame(canvas, setHud, applyFormation(home, formation), away, {
+        bindings,
+        knockout,
+        difficulty,
+        matchSecs,
+        replays,
+        onEvent: (e) => {
+          crowd.react(e.kind, e.team !== 'away');
+          pushLine.current(e);
+        },
+      });
     }
     engineRef.current = game;
     if (import.meta.env.DEV) (window as unknown as { __game: unknown }).__game = engineRef;
@@ -95,6 +120,7 @@ export function LocalMatch({
     }
     return () => {
       game.stop();
+      crowd.stop();
       engineRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -103,8 +129,16 @@ export function LocalMatch({
   useEffect(() => engineRef.current?.setBindings(bindings), [bindings]);
 
   const kickOff = () => {
+    if (kind === 'penalties') {
+      sfx.whistle();
+      pensRef.current = null;
+      setShoot(null);
+      setStage('shootout');
+      return;
+    }
     engineRef.current?.setPaused(false);
     sfx.whistle();
+    if (kind !== 'practice') crowd.start();
     setStage('playing');
   };
 
@@ -115,7 +149,9 @@ export function LocalMatch({
   }, []);
 
   usePauseKeys(stage === 'playing' || stage === 'shootout', () => pause(!paused));
-  useDeviceInput(() => engineRef.current, stage === 'playing' && !paused, paused, pad);
+  // Controller and touch drive whichever game is on: the match engine, or the shootout.
+  const sink = () => (stage === 'shootout' ? shootRef.current : engineRef.current);
+  useDeviceInput(sink, (stage === 'playing' || stage === 'shootout') && !paused, paused, pad);
 
   // Sounds: goals and the final whistle.
   useEffect(() => {
@@ -146,7 +182,7 @@ export function LocalMatch({
     if (kind === 'practice' || stage !== 'playing' || !hud.finished || saveState !== 'idle') return;
     sfx.whistle();
     engineRef.current?.stop();
-    if (kind === 'friendly') {
+    if (kind === 'friendly' && !(knockout && tied)) {
       setStage('result');
     } else if (knockout && tied) {
       pensRef.current = null;
@@ -186,7 +222,7 @@ export function LocalMatch({
     onExit();
   };
 
-  const label = kind === 'practice' ? 'Practice' : kind === 'friendly' ? 'Friendly' : fixture ? (fixture.round === 'group' ? `World Cup · Group ${fixture.groupName} · Matchday ${fixture.matchday}` : `World Cup · ${ROUND_NAMES[fixture.round]}`) : 'World Cup';
+  const label = kind === 'practice' ? 'Practice' : kind === 'penalties' ? 'Penalty shootout' : kind === 'friendly' ? 'Friendly' : fixture ? (fixture.round === 'group' ? `World Cup · Group ${fixture.groupName} · Matchday ${fixture.matchday}` : `World Cup · ${ROUND_NAMES[fixture.round]}`) : 'World Cup';
   const menuOpen = paused || stage === 'intro' || stage === 'result';
   const pens = pensRef.current;
   const winner = pens ? (pens.home > pens.away ? 'home' : 'away') : hud.homeScore > hud.awayScore ? 'home' : hud.homeScore < hud.awayScore ? 'away' : 'draw';
@@ -201,23 +237,33 @@ export function LocalMatch({
           {stage === 'playing' && kind === 'practice' && <div className="absolute left-[max(0.75rem,env(safe-area-inset-left))] top-[max(0.75rem,env(safe-area-inset-top))] rounded-[3px] bg-neon-400 px-3 py-1.5 font-display text-sm font-extrabold uppercase italic tracking-[0.2em] text-ink-950">Practice</div>}
           {stage === 'shootout' && shoot && <ShootoutHud state={shoot} home={home} away={away} />}
           <ChargeBar charge={hud.charge} />
+          {stage === 'playing' && kind !== 'practice' && <CommentaryStrip line={line} />}
+          {hud.replay && <button className="absolute inset-0 z-[5] cursor-pointer" tabIndex={-1} aria-label="Skip replay" onClick={() => engineRef.current?.skipReplay()} />}
           <CornerButtons onPause={() => pause(true)} />
-          {stage === 'playing' && touchEnabled(touch.mode) && !paused && <TouchControls sink={() => engineRef.current} layout={touch.layout} />}
+          {touchEnabled(touch.mode) && !paused && <TouchControls sink={sink} layout={touch.layout} />}
         </>
       )}
       <RotatePrompt />
       {stage === 'playing' && kind === 'practice' && coach && !paused && <Tutorial engine={() => engineRef.current} hud={hud} onClose={() => setCoach(false)} />}
 
-      {stage === 'intro' && <IntroCard home={home} away={away} label={label} sub={kind === 'practice' ? 'No clock, no rules. Just you, four teammates and a keeper.' : kind === 'friendly' ? 'A full 11 v 11 against the CPU. Nothing is saved.' : knockout ? 'Knockout: extra time and penalties if level after 90 minutes.' : undefined} onStart={kickOff} onBack={onExit}>
-        {kind !== 'practice' && <FormationPicker team={home} value={formation} onChange={(id) => { setFormation(id); saveFormation(id); }} />}
+      {stage === 'intro' && <IntroCard home={home} away={away} label={label} sub={kind === 'practice' ? 'No clock, no rules. Just you, four teammates and a keeper.' : kind === 'penalties' ? 'Five kicks each, then sudden death. Aim with the arrows and shoot; when the CPU shoots, dive the right way.' : kind === 'friendly' ? (decide ? 'A full 11 v 11 against the CPU. Level after 90? Extra time, then penalties. Nothing is saved.' : 'A full 11 v 11 against the CPU. Nothing is saved.') : knockout ? 'Knockout: extra time and penalties if level after 90 minutes.' : undefined} onStart={kickOff} onBack={onExit}>
+        {kind !== 'practice' && kind !== 'penalties' && <FormationPicker team={home} value={formation} onChange={(id) => { setFormation(id); saveFormation(id); }} />}
       </IntroCard>}
 
       {paused && <PauseMenu onResume={() => pause(false)} onQuit={quit} onRestart={kind !== 'worldcup' ? () => { pause(false); setGameKey((k) => k + 1); } : undefined} />}
 
       {stage === 'result' && kind === 'friendly' && (
-        <ResultPanel home={home} away={away} hud={hud} headline={headline} sub="Friendly: nothing is saved.">
+        <ResultPanel home={home} away={away} hud={hud} headline={headline} pens={pens} sub="Friendly: nothing is saved.">
           <Btn variant="primary" size="lg" onClick={() => { setGameKey((k) => k + 1); }} autoFocus data-autofocus>Play again</Btn>
-          <ShareResultBtn info={cardFor(home, away, hud, 'Friendly', headline)} />
+          <ShareResultBtn info={cardFor(home, away, hud, 'Friendly', headline, pens ? `${(pens.home > pens.away ? home : away).name} win ${Math.max(pens.home, pens.away)}–${Math.min(pens.home, pens.away)} on penalties` : undefined)} />
+          <Btn size="lg" data-back onClick={onExit}>Back</Btn>
+        </ResultPanel>
+      )}
+
+      {stage === 'result' && kind === 'penalties' && (
+        <ResultPanel home={home} away={away} hud={{ ...hud, homeScore: pens?.home ?? 0, awayScore: pens?.away ?? 0, stats: undefined }} headline={headline} label="Penalty shootout" sub="Nothing is saved.">
+          <Btn variant="primary" size="lg" onClick={() => setGameKey((k) => k + 1)} autoFocus data-autofocus>Play again</Btn>
+          <ShareResultBtn info={cardFor(home, away, { ...hud, homeScore: pens?.home ?? 0, awayScore: pens?.away ?? 0, stats: undefined }, 'Penalty shootout', headline)} />
           <Btn size="lg" data-back onClick={onExit}>Back</Btn>
         </ResultPanel>
       )}

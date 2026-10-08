@@ -82,6 +82,21 @@ export interface HudState {
   extraTime?: boolean;
   /** Filled once the final whistle has gone. */
   stats?: MatchStats;
+  /** A goal replay is playing (any key skips it). */
+  replay?: boolean;
+  /** Minutes of added time announced at 90', once announced. */
+  added?: number;
+}
+
+/** Things that happen in a match, for the commentary and the crowd (see ui/commentary.ts and ui/crowd.ts). */
+export type GameEventKind = 'goal' | 'save' | 'shot' | 'foul' | 'yellow' | 'red' | 'offside' | 'corner' | 'goalkick' | 'throwin' | 'penalty' | 'halftime' | 'fulltime' | 'added' | 'extratime';
+export interface GameEvent {
+  kind: GameEventKind;
+  /** The team the event is about: the scorer, the keeper who saved, the player who fouled. */
+  team?: Team;
+  name?: string;
+  /** The score "2-1" for a goal, the minutes for added time. */
+  extra?: string;
 }
 
 export type StateListener = (s: HudState) => void;

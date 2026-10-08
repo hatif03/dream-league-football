@@ -49,9 +49,17 @@ export function MatchHud({
             <span className="flex min-w-[3.6rem] items-center justify-center bg-neon-400 px-2.5 text-base font-extrabold tabular-nums text-ink-950 md:text-lg">
               {fmtTime(hud.clock)}
               {hud.extraTime && <sup className="ml-1 text-[10px]">ET</sup>}
+              {!hud.extraTime && hud.added != null && hud.clock >= 5400 && <sup className="ml-1 text-[10px]">+{hud.added}</sup>}
             </span>
           </div>
           {tag && <div className="mt-1 inline-block rounded-sm bg-ink-950/80 px-2 py-0.5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-mist-300">{tag}</div>}
+        </div>
+      )}
+
+      {hud.replay && (
+        <div className="pointer-events-none absolute left-1/2 top-[max(0.75rem,env(safe-area-inset-top))] z-10 flex -translate-x-1/2 flex-col items-center gap-1 select-none" role="status">
+          <span className="rounded-[3px] bg-hot-500 px-3 py-1 font-display text-xl font-extrabold uppercase tracking-[0.2em] text-white shadow-lg shadow-black/50 animate-pulse">Replay</span>
+          <span className="rounded-[3px] bg-ink-950/80 px-2 py-0.5 font-display text-xs font-bold uppercase tracking-wider text-mist-300">Any key or tap to skip</span>
         </div>
       )}
 

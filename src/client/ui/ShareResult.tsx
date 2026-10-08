@@ -33,7 +33,9 @@ export function ShareResultBtn({ info }: { info: CardInfo }) {
       onClick={async () => {
         setBusy(true);
         try {
-          if ((await shareResultCard(info)) === 'saved') toast.success('Result image saved');
+          const how = await shareResultCard(info);
+          if (how === 'saved') toast.success('Result image saved');
+          if (how === 'linked') toast.success('Link copied. Paste it in a chat to show the score.');
         } catch (e) {
           toast.error((e as Error).message);
         } finally {

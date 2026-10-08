@@ -9,6 +9,8 @@ const KEYS = [
   'wc2026.touch',
   'wc2026.difficulty',
   'wc2026.matchSecs',
+  'wc2026.replays',
+  'wc2026.commentary',
   'wc2026.formation',
   'wc2026.sound',
   'wc2026.tutorialDone',

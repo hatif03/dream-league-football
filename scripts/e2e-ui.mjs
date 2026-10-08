@@ -74,7 +74,7 @@ if (!quick) {
   await page.getByRole('button', { name: /Kick off/ }).click();
   await page.waitForTimeout(3000);
   await shot('4-playing');
-  await page.getByText('Full time').waitFor({ timeout: 240_000 });
+  await page.getByText('Full time').waitFor({ timeout: 420_000 });
   await page.getByText(/Result saved/).waitFor({ timeout: 15_000 });
   await shot('5-fulltime');
   await page.getByRole('button', { name: /Continue/ }).click();

@@ -12,6 +12,8 @@ export interface Lobby {
   /** open | live | closed */
   status: string;
   clientVersion: string;
+  /** match (the 11 v 11 game) or penalties (a duel the server referees). */
+  mode: string;
   matchId?: string | null;
   rematchLobbyId?: string | null;
 }
@@ -39,6 +41,9 @@ export interface FriendMatch {
   endReason?: string | null;
   winnerUserId?: string | null;
   leaverUserId?: string | null;
+  mode: string;
+  hostRatingDelta?: number | null;
+  guestRatingDelta?: number | null;
   transport?: string | null;
   /** JSON of the end-of-match numbers, when the host reported them. */
   stats?: string | null;
@@ -50,6 +55,8 @@ export interface MatchView {
   hostName: string;
   guestName: string;
   youAreHost: boolean;
+  /** Rating points you gained or lost from this match, once it is finished. */
+  ratingDelta?: number | null;
 }
 
 export interface SignalView {
@@ -61,7 +68,8 @@ export interface SignalView {
 /** Build id both players must share. Injected by Vite from a hash of src/client/game. */
 export const CLIENT_VERSION: string = typeof __BUILD_ID__ === 'string' ? __BUILD_ID__ : 'dev';
 
-export const createLobby = () => call<LobbyView>('lobby/create', { clientVersion: CLIENT_VERSION });
+export const createLobby = (mode: 'match' | 'penalties' = 'match') =>
+  call<LobbyView>('lobby/create', { clientVersion: CLIENT_VERSION, mode });
 export const joinLobby = (code: string) => call<LobbyView>('lobby/join', { code, clientVersion: CLIENT_VERSION });
 export const getLobby = (lobbyId: string) => call<LobbyView>('lobby/get', { lobbyId });
 export const setNation = (lobbyId: string, nationId: string) =>

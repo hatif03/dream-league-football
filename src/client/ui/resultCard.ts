@@ -1,4 +1,8 @@
-// A shareable image of a finished match, drawn on a canvas (nothing is uploaded anywhere).
+// A shareable image of a finished match, drawn on a canvas. Signed-in players can also share a link to it
+// (the picture is stored with Serverpod cloud storage and the link opens a preview page).
+
+import { getAuth } from '@/client/api/http';
+import { createSharedResult } from '@/client/api/duel';
 
 export interface CardInfo {
   headline: string; // Victory, Defeat, Draw
@@ -107,12 +111,53 @@ export async function makeResultCard(i: CardInfo): Promise<Blob> {
   return new Promise((resolve, reject) => c.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not draw the card.'))), 'image/png'));
 }
 
-/** Share the card with the phone's share sheet, or download it. Returns what happened. */
-export async function shareResultCard(i: CardInfo): Promise<'shared' | 'saved'> {
+/** The host that serves the /r/<id> preview pages (the web server, which is where the relay lives too). */
+const WEB_BASE: string = import.meta.env.VITE_RELAY_URL
+  ? import.meta.env.VITE_RELAY_URL.replace(/^ws/, 'http')
+  : location.origin;
+
+/** Uploads the card to Serverpod's cloud storage and returns its public page (with an Open Graph preview). */
+async function publishCard(blob: Blob, i: CardInfo): Promise<string | null> {
+  try {
+    if (!getAuth()) return null;
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let bin = '';
+    for (let k = 0; k < bytes.length; k += 0x8000) bin += String.fromCharCode(...bytes.subarray(k, k + 0x8000));
+    const title = `${i.homeName} ${i.homeScore}–${i.awayScore} ${i.awayName}`;
+    const link = await createSharedResult(btoa(bin), title, [i.headline, i.label].filter(Boolean).join(' · ').slice(0, 150));
+    return `${WEB_BASE}/r/${link.id}`;
+  } catch {
+    return null; // not signed in or offline: fall back to the picture itself
+  }
+}
+
+/**
+ * Share the result. Signed in, the picture is stored with Serverpod and a link to its preview page is
+ * shared (a phone's share sheet, or the clipboard on a computer). Otherwise the picture itself is shared
+ * or downloaded. Returns what happened.
+ */
+export async function shareResultCard(i: CardInfo): Promise<'shared' | 'saved' | 'linked'> {
   const blob = await makeResultCard(i);
-  const file = new File([blob], 'dream-league-football-result.png', { type: 'image/png' });
   const text = `${i.homeName} ${i.homeScore}–${i.awayScore} ${i.awayName} on Dream League Football`;
-  const touch = window.matchMedia('(pointer: coarse)').matches; // phones get the share sheet, computers a download
+  const touch = window.matchMedia('(pointer: coarse)').matches; // phones get the share sheet, computers a link or download
+  const url = await publishCard(blob, i);
+  if (url) {
+    if (touch && navigator.share) {
+      try {
+        await navigator.share({ title: 'Dream League Football', text, url });
+        return 'shared';
+      } catch (e) {
+        if ((e as Error).name === 'AbortError') return 'shared';
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      return 'linked';
+    } catch {
+      /* clipboard blocked: fall through to the picture */
+    }
+  }
+  const file = new File([blob], 'dream-league-football-result.png', { type: 'image/png' });
   if (touch && navigator.canShare?.({ files: [file] })) {
     try {
       await navigator.share({ files: [file], title: 'Dream League Football', text });
@@ -121,11 +166,11 @@ export async function shareResultCard(i: CardInfo): Promise<'shared' | 'saved'> 
       if ((e as Error).name === 'AbortError') return 'shared';
     }
   }
-  const url = URL.createObjectURL(blob);
+  const obj = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url;
+  a.href = obj;
   a.download = file.name;
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  setTimeout(() => URL.revokeObjectURL(obj), 5000);
   return 'saved';
 }

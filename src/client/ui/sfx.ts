@@ -28,6 +28,9 @@ function audio(): AudioContext | null {
   return ctx;
 }
 
+/** The shared Web Audio context (null while sound is off), for the crowd ambience. */
+export const audioContext = audio;
+
 function tone(freq: number, dur: number, type: OscillatorType = 'sine', gain = 0.06, when = 0, slideTo?: number) {
   const c = audio();
   if (!c) return;

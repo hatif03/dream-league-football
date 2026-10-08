@@ -7,6 +7,24 @@ import { SETTINGS_CHANGED, SETTINGS_REMOTE } from '@/client/api/settingsSync';
 export type Difficulty = 'easy' | 'normal' | 'hard';
 const DIFF_KEY = 'wc2026.difficulty';
 const LEN_KEY = 'wc2026.matchSecs';
+const REPLAYS_KEY = 'wc2026.replays';
+const COMMENTARY_KEY = 'wc2026.commentary';
+
+/** On unless the player switched it off. */
+const readFlag = (key: string): boolean => {
+  try {
+    return localStorage.getItem(key) !== '0';
+  } catch {
+    return true;
+  }
+};
+const writeFlag = (key: string, on: boolean) => {
+  try {
+    localStorage.setItem(key, on ? '1' : '0');
+  } catch {
+    /* storage unavailable */
+  }
+};
 export const MATCH_LENGTHS = [180, 300, 480] as const;
 
 interface Value {
@@ -22,6 +40,12 @@ interface Value {
   /** Real seconds a World Cup match lasts (90 football minutes). */
   matchSecs: number;
   setMatchSecs: (s: number) => void;
+  /** Replay the lead-up to a goal after the celebration (World Cup and friendlies). */
+  replays: boolean;
+  setReplays: (on: boolean) => void;
+  /** Text commentary lines during a match. */
+  commentary: boolean;
+  setCommentary: (on: boolean) => void;
   muted: boolean;
   setSoundMuted: (m: boolean) => void;
 }
@@ -40,6 +64,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [pad, setP] = useState<PadBindings>(() => loadPad());
   const [touch, setT] = useState(() => loadTouch());
   const [muted, setMu] = useState(() => isMuted());
+  const [replays, setRep] = useState(() => readFlag(REPLAYS_KEY));
+  const [commentary, setCom] = useState(() => readFlag(COMMENTARY_KEY));
   const [matchSecs, setLen] = useState<number>(() => {
     try {
       const v = Number(localStorage.getItem(LEN_KEY));
@@ -67,6 +93,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setP(loadPad());
       setT(loadTouch());
       setMu(isMuted());
+      setRep(readFlag(REPLAYS_KEY));
+      setCom(readFlag(COMMENTARY_KEY));
       setD(readDifficulty());
       try {
         const v = Number(localStorage.getItem(LEN_KEY));
@@ -117,13 +145,23 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
           /* storage unavailable */
         }
       },
+      replays,
+      setReplays: (on) => {
+        setRep(on);
+        writeFlag(REPLAYS_KEY, on);
+      },
+      commentary,
+      setCommentary: (on) => {
+        setCom(on);
+        writeFlag(COMMENTARY_KEY, on);
+      },
       muted,
       setSoundMuted: (m) => {
         setMuted(m);
         setMu(m);
       },
     }),
-    [bindings, setBindings, pad, touch, difficulty, matchSecs, muted],
+    [bindings, setBindings, pad, touch, difficulty, matchSecs, replays, commentary, muted],
   );
   // Any change the player makes is copied to their account (skipped on the first render and for remote loads).
   const first = useRef(true);
@@ -137,7 +175,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       return;
     }
     window.dispatchEvent(new Event(SETTINGS_CHANGED));
-  }, [bindings, pad, touch, difficulty, matchSecs, muted]);
+  }, [bindings, pad, touch, difficulty, matchSecs, replays, commentary, muted]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

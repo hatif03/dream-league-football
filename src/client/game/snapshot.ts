@@ -48,6 +48,8 @@ export interface Snapshot {
   ripple: [number, number];
   /** full time has been blown */
   fin: boolean;
+  /** minutes of added time announced at 90 (0 before that) */
+  added?: number;
   /** Final numbers as [host, guest] pairs, present once `fin` is true. */
   stats?: { poss: [number, number]; shots: [number, number]; onTarget: [number, number]; saves: [number, number]; yellow: [number, number]; red: [number, number] };
 }

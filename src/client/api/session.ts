@@ -14,6 +14,8 @@ export interface UserProfile {
   settings?: string | null;
   /** The player's club crest and kit as JSON. */
   club?: string | null;
+  /** Elo rating from online matches and penalty duels (starts at 1000). */
+  rating: number;
   termsAcceptedAt?: string | null;
 }
 

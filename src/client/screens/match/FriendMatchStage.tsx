@@ -15,6 +15,8 @@ import { MenuNav } from '@/client/ui/MenuNav';
 import { ChargeBar, MatchHud } from '@/client/ui/MatchHud';
 import { useSettings } from '@/client/ui/settings';
 import { sfx } from '@/client/ui/sfx';
+import { useQueryClient } from '@tanstack/react-query';
+import { loadProfile } from '@/client/api/session';
 import {
   claimResult,
   getMatch,
@@ -54,6 +56,7 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
   const opponentName = awayName;
   const { bindings, pad, touch } = useSettings();
   const dialog = useDialog();
+  const queryClient = useQueryClient();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<PitchKickGame | null>(null);
@@ -87,7 +90,10 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
     doneRef.current = true;
     setResult(m);
     setPhase('result');
-  }, []);
+    // The rating, the leaderboard and the daily challenge may have moved.
+    void loadProfile();
+    for (const key of ['daily', 'leaderboard', 'record', 'history']) void queryClient.invalidateQueries({ queryKey: [key] });
+  }, [queryClient]);
 
   const waitForResult = useCallback(async () => {
     setPhase('waitResult');
@@ -344,7 +350,11 @@ export function FriendMatchStage({ view, onExit, onRematch }: { view: LobbyView;
   let headline = 'Draw';
   let sub: string | undefined = 'Saved to both of your records.';
   if (m) {
-    if (m.status === 'finished') headline = !m.winnerUserId ? 'Draw' : m.winnerUserId === myId ? 'Victory' : 'Defeat';
+    if (m.status === 'finished') {
+      headline = !m.winnerUserId ? 'Draw' : m.winnerUserId === myId ? 'Victory' : 'Defeat';
+      const d = result?.ratingDelta;
+      if (d != null && d !== 0) sub = 'Saved to both of your records. Rating ' + (d > 0 ? '+' : '−') + Math.abs(d) + '.';
+    }
     else if (m.status === 'abandoned') {
       headline = m.leaverUserId === myId ? 'You left' : `${opponentName} left`;
       sub = m.leaverUserId === myId ? 'No result was recorded.' : 'The match ended early. No win is recorded for either of you.';

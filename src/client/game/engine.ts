@@ -60,10 +60,25 @@ import {
   duelRate,
 } from './ratings';
 import { CAM_MIN, CAM_MAX, CAM_Y_MIN, CAM_Y_MAX } from './projection';
-import type { Vec, Team, PlayerEntity, StateListener, MatchStats } from './types';
+import type { Vec, Team, PlayerEntity, StateListener, MatchStats, GameEvent } from './types';
 import { renderScene } from './render';
 import { makePlayerEntity } from './entities';
 import { P, type Snapshot } from './snapshot';
+
+// Goal replays: frames kept per second, seconds kept, playback speed, and how much of the celebration is still recorded.
+const REPLAY_FPS = 30;
+const REPLAY_SECS = 4;
+const REPLAY_SPEED = 0.8;
+const REPLAY_CELEBRATION_KEEP = 3.4;
+
+/** One recorded frame of play: copies of the players (so later movement does not change it) and the camera. */
+interface ReplayFrame {
+  camX: number;
+  camY: number;
+  ball: { x: number; y: number; z: number; r: number };
+  players: { p: PlayerEntity; kit: Kit }[];
+  ripple: { left: number; right: number };
+}
 
 // Re-exports so consumers (e.g. HomePage) can import these from the engine entry.
 export type { TeamData } from './teams/types';
@@ -275,6 +290,17 @@ export class PitchKickGame {
   private matchSecs = MATCH_REAL_SECS;
   /** The second half has started (half-time is taken once, at 45 displayed minutes). */
   private halfTimeDone = false;
+  /** Added time: announced once at 90' (game minutes), based on goals and cards. */
+  private addedMins = 0;
+  private addedDone = false;
+  /** Commentary / crowd listener (local matches only). */
+  private onEvent: ((e: GameEvent) => void) | null = null;
+  /** Goal replays: the last few seconds are kept as light frames and replayed after a goal. */
+  private replaysOn = false;
+  private replayBuf: ReplayFrame[] = [];
+  private replayAcc = 0;
+  private frameDt = 1 / 60;
+  private replay: { frames: ReplayFrame[]; pos: number } | null = null;
   /** Counters the tutorial reads (see tutorialProbe). */
   private actionCounts: Record<string, number> = {};
   private movedPx = 0;
@@ -294,7 +320,7 @@ export class PitchKickGame {
     listener: StateListener,
     homeTeam: TeamData,
     awayTeam: TeamData,
-    opts: { practice?: boolean; bindings?: KeyBindings; guestSeat?: boolean; knockout?: boolean; difficulty?: 'easy' | 'normal' | 'hard'; matchSecs?: number } = {},
+    opts: { practice?: boolean; bindings?: KeyBindings; guestSeat?: boolean; knockout?: boolean; difficulty?: 'easy' | 'normal' | 'hard'; matchSecs?: number; replays?: boolean; onEvent?: (e: GameEvent) => void } = {},
   ) {
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('Canvas 2D context unavailable');
@@ -304,6 +330,8 @@ export class PitchKickGame {
     this.awayTeam = awayTeam;
     this.practice = opts.practice ?? false;
     this.knockout = opts.knockout ?? false;
+    this.replaysOn = !!opts.replays && !opts.guestSeat && !this.practice;
+    this.onEvent = opts.onEvent ?? null;
     if (opts.matchSecs && opts.matchSecs >= 60 && opts.matchSecs <= 900) this.matchSecs = this.endSecs = opts.matchSecs;
     this.cpuSkill = opts.difficulty === 'easy' ? 0.88 : opts.difficulty === 'hard' ? 1.1 : 1;
     if (opts.bindings) this.setBindings(opts.bindings);
@@ -438,6 +466,10 @@ export class PitchKickGame {
   /** Press or release a canonical key from a non-keyboard device (controller, touch). */
   pressKey(code: string) {
     if (this.paused || this.inputSuspended) return;
+    if (this.replay) {
+      this.skipReplay();
+      return;
+    }
     this.later(() => {
       if (ACTION_KEYS.has(code) && !this.keys.has(code)) this.justPressed.push(code);
       this.keys.add(code);
@@ -676,14 +708,19 @@ export class PitchKickGame {
     const sentOffAlready = (p.team === 'home' ? this.homeTeam.players.length - this.homePlayers.length : this.awayTeam.players.length - this.awayPlayers.length);
     const straightRed = Math.random() < 0.06 && sentOffAlready < 3;
     const yellow = Math.random() < 0.45;
-    if (!straightRed && !yellow) return 'FOUL';
+    if (!straightRed && !yellow) {
+      this.emitEvent({ kind: 'foul', team: p.team, name: p.name });
+      return 'FOUL';
+    }
     if (straightRed || (p.yellows ?? 0) >= 1) {
       side.r += 1;
+      this.emitEvent({ kind: 'red', team: p.team, name: p.name });
       this.sendOff(p);
       return straightRed ? 'FOUL · RED CARD' : 'FOUL · SECOND YELLOW, RED CARD';
     }
     p.yellows = 1;
     side.y += 1;
+    this.emitEvent({ kind: 'yellow', team: p.team, name: p.name });
     return 'FOUL · YELLOW CARD';
   }
 
@@ -788,6 +825,7 @@ export class PitchKickGame {
     const real: Team = this.flipped ? (team === 'home' ? 'away' : 'home') : team;
     this.tally[real].shots += 1;
     this.shotBy = real;
+    this.emitEvent({ kind: 'shot', team: real, name: this.lastKicker?.name });
   }
 
   /** A goal ends the flight of the last shot: it was on target. */
@@ -802,6 +840,7 @@ export class PitchKickGame {
     this.tally[gk.team].saves += 1;
     this.tally[this.shotBy].onTarget += 1;
     this.shotBy = null;
+    this.emitEvent({ kind: 'save', team: gk.team, name: gk.name });
   }
 
   /** Final numbers from the host's side: [home, away] pairs. */
@@ -873,6 +912,7 @@ export class PitchKickGame {
       charge: [this.chargeLevel() ?? -1, guestCharge],
       ripple: [r2(this.netRipple.left), r2(this.netRipple.right)],
       fin: !this.practice && this.elapsed >= this.endSecs,
+      added: this.addedMins,
       stats:
         !this.practice && this.elapsed >= this.endSecs
           ? (() => {
@@ -888,6 +928,10 @@ export class PitchKickGame {
   private onKeyDown = (e: KeyboardEvent) => {
     if (this.paused || this.inputSuspended) return;
     const code = this.keyRemap.get(e.code) ?? e.code;
+    if (this.replay) {
+      this.skipReplay();
+      return;
+    }
     if (MOVE_KEYS.has(code) || ACTION_KEYS.has(code)) e.preventDefault();
     const repeat = e.repeat;
     this.later(() => {
@@ -978,6 +1022,7 @@ export class PitchKickGame {
     this.jostle = 0;
     this.freeze = 0.9;
     this.celebration = 0;
+    this.replayBuf = [];
     this.celebrateTeam = null;
     this.pendingKickoff = null;
     this.scorer = null;
@@ -1063,6 +1108,8 @@ export class PitchKickGame {
       finished: !this.practice && this.elapsed >= this.endSecs,
       extraTime: this.inExtraTime,
       stats: !this.practice && this.elapsed >= this.endSecs ? this.matchStats() : undefined,
+      replay: !!this.replay,
+      added: this.addedMins || undefined,
     });
   }
 
@@ -1164,6 +1211,7 @@ export class PitchKickGame {
     let dt = (now - this.last) / 1000;
     this.last = now;
     if (dt > 0.05) dt = 0.05;
+    this.frameDt = dt;
 
     if (!this.paused && !(this.bgWorker && document.hidden)) {
       this.update(dt);
@@ -1220,6 +1268,14 @@ export class PitchKickGame {
     if (this.netRipple.left > 0) this.netRipple.left = Math.max(0, this.netRipple.left - dt * 0.6);
     if (this.netRipple.right > 0) this.netRipple.right = Math.max(0, this.netRipple.right - dt * 0.6);
 
+    // Goal replay: the lead-up plays back (slower), then the kickoff happens.
+    if (this.replay) {
+      this.stepReplay(dt);
+      this.justPressed = [];
+      this.justReleased = [];
+      return;
+    }
+
     // Goal celebration: hold play, let the ball sit in the net and the scorers
     // celebrate, then restart with the conceding side kicking off.
     if (this.celebration > 0) {
@@ -1228,7 +1284,7 @@ export class PitchKickGame {
       this.updateCamera(dt);
       this.justPressed = [];
       this.justReleased = [];
-      if (this.celebration <= 0 && this.pendingKickoff) {
+      if (this.celebration <= 0 && this.pendingKickoff && !this.beginReplay()) {
         this.resetKickoff(this.pendingKickoff);
       }
       return;
@@ -1270,10 +1326,21 @@ export class PitchKickGame {
         this.halfTimeDone = true;
         this.resetKickoff('away');
         this.setMessage('HALF TIME', 2.5);
+        this.emitEvent({ kind: 'halftime' });
         this.freeze = 2.5;
         return;
       }
       if (this.elapsed >= this.endSecs) {
+        if (!this.addedDone && !this.inExtraTime) {
+          // Added time at the end of 90: a minute or so, more after goals and cards.
+          this.addedDone = true;
+          const n = clamp(1 + this.homeScore + this.awayScore + this.cards.home.y + this.cards.away.y + 2 * (this.cards.home.r + this.cards.away.r), 1, 6);
+          this.addedMins = n;
+          this.endSecs += (n * 60 * this.matchSecs) / MATCH_DISPLAY_SECS;
+          this.setMessage(`ADDED TIME  +${n}`, 2.5);
+          this.emitEvent({ kind: 'added', extra: String(n) });
+          return;
+        }
         this.elapsed = this.endSecs;
         if (this.knockout && !this.inExtraTime && this.homeScore === this.awayScore) {
           // Level after 90 minutes in a knockout game: extra time, with a fresh kickoff.
@@ -1281,6 +1348,7 @@ export class PitchKickGame {
           this.endSecs += EXTRA_TIME_REAL_SECS * (this.matchSecs / MATCH_REAL_SECS);
           this.resetKickoff('away');
           this.setMessage('EXTRA TIME', 2.5);
+          this.emitEvent({ kind: 'extratime' });
           this.freeze = 2.5;
           return;
         }
@@ -1291,6 +1359,7 @@ export class PitchKickGame {
               ? `FULL TIME — ${this.awayTeam.name.toUpperCase()} WIN!`
               : 'FULL TIME — DRAW';
         this.setMessage(verdict, 9999);
+        this.emitEvent({ kind: 'fulltime', extra: `${this.homeScore}-${this.awayScore}` });
         this.freeze = 9999;
       }
     }
@@ -2378,6 +2447,8 @@ export class PitchKickGame {
     this.camX = clamp(spotX, CAM_MIN, CAM_MAX);
     this.camY = clamp(spotY, CAM_Y_MIN, CAM_Y_MAX);
     this.setMessage('OFFSIDE', 1.6);
+    this.emitEvent({ kind: 'offside', team: atkTeam, name: offsider.name });
+    this.replayBuf = [];
     this.freeze = 1.1;
 
     // Clear all transient ball/possession state so play restarts cleanly.
@@ -4038,6 +4109,11 @@ export class PitchKickGame {
     this.camX = clamp(spotX, CAM_MIN, CAM_MAX);
     this.camY = clamp(spotY, CAM_Y_MIN, CAM_Y_MAX);
     if (label) this.setMessage(label, 1.6);
+    if (isThrowIn) this.emitEvent({ kind: 'throwin', team });
+    else if (takerIsGK) this.emitEvent({ kind: 'goalkick', team });
+    else if (label.startsWith('CORNER')) this.emitEvent({ kind: 'corner', team });
+    else if (label.startsWith('PENALTY')) this.emitEvent({ kind: 'penalty', team });
+    this.replayBuf = [];
     this.freeze = 0.9;
 
     // Clear transient ball/possession state so play restarts cleanly.
@@ -4147,6 +4223,7 @@ export class PitchKickGame {
       this.lastKicker && this.lastKicker.team === scoringTeam
         ? this.lastKicker
         : null;
+    this.emitEvent({ kind: 'goal', team: scoringTeam, name: this.scorer?.name, extra: `${this.homeScore}-${this.awayScore}` });
     const team = scoringTeam === 'home' ? this.homePlayers : this.awayPlayers;
     for (const p of team) if (!p.isGK) p.celebrating = true;
     this.owner = null;
@@ -4195,7 +4272,75 @@ export class PitchKickGame {
 
   // ---- render (TV broadcast pseudo-3D) ------------------------------------
 
+  private emitEvent(e: GameEvent) {
+    if (this.onEvent && !this.guest) this.onEvent(e);
+  }
+
+  // ---- goal replays ---------------------------------------------------------
+
+  /** Keep a light copy of this frame (about 30 a second, the last few seconds). */
+  private recordFrame() {
+    if (!this.replaysOn || this.replay) return;
+    // The goal itself and the first moments of the celebration are kept; the rest is not.
+    if (this.celebration > 0 && this.celebration < REPLAY_CELEBRATION_KEEP) return;
+    this.replayAcc += this.frameDt;
+    if (this.replayAcc < 1 / REPLAY_FPS) return;
+    this.replayAcc -= 1 / REPLAY_FPS;
+    const all = [...this.awayPlayers, ...this.homePlayers];
+    this.replayBuf.push({
+      camX: this.camX,
+      camY: this.camY,
+      ball: { x: this.ball.x, y: this.ball.y, z: this.ball.z, r: this.ball.r },
+      players: all.map((p) => ({ p: { ...p, facing: { ...p.facing }, slideDir: p.slideDir ? { ...p.slideDir } : undefined }, kit: this.kitFor(p) })),
+      ripple: { left: this.netRipple.left, right: this.netRipple.right },
+    });
+    if (this.replayBuf.length > REPLAY_SECS * REPLAY_FPS) this.replayBuf.shift();
+  }
+
+  /** After the celebration: play back the lead-up. False when there is nothing to show. */
+  private beginReplay(): boolean {
+    if (!this.replaysOn || this.replayBuf.length < REPLAY_FPS) return false;
+    this.replay = { frames: this.replayBuf, pos: 0 };
+    this.replayBuf = [];
+    this.celebration = 0;
+    return true;
+  }
+
+  private stepReplay(dt: number) {
+    const r = this.replay;
+    if (!r) return;
+    r.pos += dt * REPLAY_FPS * REPLAY_SPEED;
+    if (r.pos >= r.frames.length - 1) this.endReplay();
+  }
+
+  private endReplay() {
+    const next = this.pendingKickoff;
+    this.replay = null;
+    this.replayBuf = [];
+    if (next) this.resetKickoff(next);
+  }
+
+  /** Skip the replay and go to the kickoff (any key, tap or button does this). */
+  skipReplay() {
+    if (this.replay) this.endReplay();
+  }
+
   private render() {
+    const r = this.replay;
+    if (r) {
+      const f = r.frames[Math.min(r.frames.length - 1, Math.floor(r.pos))];
+      renderScene(this.ctx, {
+        camX: f.camX,
+        camY: f.camY,
+        ball: f.ball,
+        players: f.players,
+        controlled: null,
+        switchHint: null,
+        netRipple: f.ripple,
+      });
+      return;
+    }
+    this.recordFrame();
     renderScene(this.ctx, {
       camX: this.camX,
       camY: this.camY,

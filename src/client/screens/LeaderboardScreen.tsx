@@ -1,11 +1,12 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLeaderboard } from '@/client/api/queries';
-import type { LeaderEntry } from '@/client/api/rankings';
+import type { LeaderBy, LeaderEntry } from '@/client/api/rankings';
 import { useSession } from '@/client/api/session';
 import { Avatar, Spinner } from '@/client/ui/controls';
 import { useHints } from '@/client/ui/hints';
 
-function Row({ e, me }: { e: LeaderEntry; me: boolean }) {
+function Row({ e, me, by }: { e: LeaderEntry; me: boolean; by: LeaderBy }) {
   return (
     <tr className={`border-t border-white/10 ${me ? 'bg-neon-400/15 text-white' : 'text-mist-100'}`}>
       <td className="w-12 py-2 pl-3 font-display text-xl font-bold tabular text-mist-300">{e.rank}</td>
@@ -23,15 +24,16 @@ function Row({ e, me }: { e: LeaderEntry; me: boolean }) {
       <td className="hidden text-right tabular text-gold-400 sm:table-cell">{e.draws}</td>
       <td className="hidden text-right tabular text-loss sm:table-cell">{e.losses}</td>
       <td className="text-right tabular text-gold-400">{e.titles > 0 ? `🏆 ${e.titles}` : ''}</td>
-      <td className="pr-3 text-right font-display text-xl font-bold tabular text-white">{e.points}</td>
+      <td className="pr-3 text-right font-display text-xl font-bold tabular text-white">{by === 'rating' ? e.rating : e.points}</td>
     </tr>
   );
 }
 
-/** The best players: 3 points for a friend-match win, 1 for a draw, 25 for a World Cup title. */
+/** The best players, by Elo rating (online matches and penalty duels) or by points (3 per win, 1 per draw, 25 per World Cup title). */
 export default function LeaderboardScreen() {
   const session = useSession();
-  const board = useLeaderboard(25);
+  const [by, setBy] = useState<LeaderBy>('rating');
+  const board = useLeaderboard(25, by);
   useHints([{ kb: 'Esc', pad: 'B', label: 'Back' }]);
   const meId = session.status === 'in' ? session.profile.userId : '';
   const data = board.data;
@@ -42,6 +44,13 @@ export default function LeaderboardScreen() {
       <div className="mb-4">
         <div className="t-label">Global</div>
         <h1 className="t-display text-4xl text-white md:text-6xl">Leaderboard</h1>
+      </div>
+      <div role="radiogroup" aria-label="Rank players by" className="mb-3 inline-flex overflow-hidden rounded ring-1 ring-white/20">
+        {(['rating', 'points'] as const).map((k) => (
+          <button key={k} type="button" role="radio" aria-checked={by === k} onClick={() => setBy(k)} className={`px-4 py-2 font-display text-sm font-bold uppercase tracking-wider focus-visible:outline focus-visible:outline-2 focus-visible:outline-neon-400 ${by === k ? 'bg-neon-400 text-ink-950' : 'bg-white/5 text-mist-200 hover:bg-white/10'}`}>
+            {k === 'rating' ? 'Rating' : 'Points'}
+          </button>
+        ))}
       </div>
       <div className="glass p-3 md:p-5 animate-screen-in">
         {board.isLoading ? (
@@ -68,12 +77,12 @@ export default function LeaderboardScreen() {
                 <th className="hidden pb-2 text-right sm:table-cell">D</th>
                 <th className="hidden pb-2 text-right sm:table-cell">L</th>
                 <th className="pb-2 text-right">Cups</th>
-                <th className="pb-2 pr-3 text-right">Pts</th>
+                <th className="pb-2 pr-3 text-right">{by === 'rating' ? 'Rating' : 'Pts'}</th>
               </tr>
             </thead>
             <tbody>
               {data.top.map((e) => (
-                <Row key={e.userId} e={e} me={e.userId === meId} />
+                <Row key={e.userId} e={e} me={e.userId === meId} by={by} />
               ))}
               {youBelow && (
                 <>
@@ -82,14 +91,14 @@ export default function LeaderboardScreen() {
                       …
                     </td>
                   </tr>
-                  <Row e={youBelow} me />
+                  <Row e={youBelow} me by={by} />
                 </>
               )}
             </tbody>
           </table>
         )}
         <p className="mt-4 px-3 font-body text-xs text-mist-400">
-          Points: 3 for each friend-match win, 1 for each draw, 25 for each solo World Cup you win. {data ? `${data.total} players are ranked.` : ''} Abandoned and void matches count for nobody.{' '}
+          Rating: an Elo score that starts at 1000 and moves with every online match and penalty duel, more when you beat a stronger player. Points: 3 for each friend-match win, 1 for each draw, 25 for each solo World Cup you win. {data ? `${data.total} players are ranked.` : ''} Abandoned and void matches count for nobody.{' '}
           {data && !data.you && (
             <>
               <Link to="/online" className="text-neon-400 underline">

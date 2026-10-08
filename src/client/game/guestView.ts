@@ -300,6 +300,7 @@ export class GuestView {
       awayPlayer: theirs ? { num: theirs.num, name: theirs.name } : null,
       charge: s.charge[1] >= 0 ? s.charge[1] : null,
       finished: s.fin,
+      added: s.added || undefined,
       // The host sends [host, guest]; this view has the guest on the left.
       stats: s.stats
         ? {

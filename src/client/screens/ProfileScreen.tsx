@@ -143,7 +143,11 @@ export default function ProfileScreen() {
         </div>
       )}
 
-      <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Friend match record">
+      <section className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-5" aria-label="Online record">
+        <div className="glass col-span-2 p-4 text-center md:col-span-1" style={{ borderTop: '4px solid #28e4ff' }}>
+          <div className="t-display text-5xl text-white tabular">{profile.rating}</div>
+          <div className="t-label">Rating</div>
+        </div>
         {[
           ['Wins', record.data?.wins, '#3df08a'],
           ['Draws', record.data?.draws, '#ffd54f'],

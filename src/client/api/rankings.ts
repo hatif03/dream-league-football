@@ -11,6 +11,8 @@ export interface LeaderEntry {
   losses: number;
   titles: number;
   points: number;
+  /** Elo rating from friend matches and penalty duels (starts at 1000). */
+  rating: number;
 }
 
 export interface LeaderboardView {
@@ -28,5 +30,6 @@ export interface Achievement {
   target: number;
 }
 
-export const getLeaderboard = (limit = 25) => call<LeaderboardView>('rankings/leaderboard', { limit });
+export type LeaderBy = 'rating' | 'points';
+export const getLeaderboard = (limit = 25, by: LeaderBy = 'rating') => call<LeaderboardView>('rankings/leaderboard', { limit, by });
 export const getAchievements = () => call<Achievement[]>('rankings/achievements', {});

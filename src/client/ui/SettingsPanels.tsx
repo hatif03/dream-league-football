@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { BINDING_GROUPS, DEFAULT_BINDINGS, assignKey, codeLabel, type GameAction } from '@/client/game/keybindings';
+import { BINDING_GROUPS, DEFAULT_BINDINGS, KEYBOARD_PRESETS, assignKey, codeLabel, presetOf, type GameAction } from '@/client/game/keybindings';
 import {
   DEFAULT_PAD,
   DEFAULT_TOUCH,
@@ -82,8 +82,34 @@ function Keyboard() {
   }, [capturing, bindings, setBindings]);
 
   const isDefault = (Object.keys(DEFAULT_BINDINGS) as GameAction[]).every((a) => bindings[a] === DEFAULT_BINDINGS[a]);
+  const current = presetOf(bindings);
   return (
     <>
+      <h3 className="t-label mb-2">Layout</h3>
+      <div role="radiogroup" aria-label="Keyboard layout" className="mb-2 grid gap-2 sm:grid-cols-3">
+        {KEYBOARD_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            role="radio"
+            aria-checked={current === p.id}
+            onClick={() => {
+              setBindings({ ...p.bindings });
+              sfx.select();
+            }}
+            className={`rounded p-3 text-left ${current === p.id ? 'bg-neon-400 text-ink-950' : 'bg-white/10 text-white hover:bg-white/20'}`}
+          >
+            <span className="block font-display text-lg font-bold uppercase leading-tight">{p.label}</span>
+            <span className={`block font-body text-xs ${current === p.id ? 'text-ink-800' : 'text-mist-300'}`}>{p.note}</span>
+          </button>
+        ))}
+        <div role="radio" aria-checked={current === 'custom'} aria-label="Custom layout" className={`rounded p-3 ${current === 'custom' ? 'bg-neon-400 text-ink-950' : 'bg-white/5 text-mist-400'}`}>
+          <span className="block font-display text-lg font-bold uppercase leading-tight">Custom</span>
+          <span className="block font-body text-xs">Change any key below</span>
+        </div>
+      </div>
+      <p className="mb-4 font-body text-xs text-mist-400">
+        Both layouts follow EA SPORTS FC&apos;s keyboard settings. In either one, hold the change-player key while charging a through pass for a lofted through ball.
+      </p>
       <p className="mb-4 font-body text-sm text-mist-300">Pick an action, then press the key you want. <b className="text-white">Esc</b> cancels. Two actions never share a key.</p>
       <div className="grid gap-x-6 gap-y-5 md:grid-cols-2">
         {BINDING_GROUPS.map((g) => (
@@ -129,7 +155,7 @@ function Controller() {
   return (
     <>
       <p className={`mb-1 font-body text-sm ${connected ? 'text-win' : 'text-mist-300'}`}>{connected ? 'Controller connected.' : 'No controller detected. Connect one and press any button on it.'}</p>
-      <p className="mb-4 font-body text-sm text-mist-300">The left stick or D-pad moves. Pick an action, then press the button you want for it.</p>
+      <p className="mb-4 font-body text-sm text-mist-300">The layout follows EA SPORTS FC: A ground pass, B shoot (tackle without the ball), X lob pass (slide tackle without the ball), Y through ball, RT sprint, LB change player (hold with Y for a lofted through ball), LT jockey. The left stick or D-pad moves. To change one, pick an action and press the button you want.</p>
       <div className="grid gap-1.5 md:grid-cols-2">
         {PAD_ACTIONS.map(({ action, label }) => (
           <Row key={action} label={label}>
@@ -180,7 +206,7 @@ function Touch() {
 }
 
 function Gameplay() {
-  const { difficulty, setDifficulty, matchSecs, setMatchSecs } = useSettings();
+  const { difficulty, setDifficulty, matchSecs, setMatchSecs, replays, setReplays, commentary, setCommentary } = useSettings();
   const info: Record<Difficulty, string> = {
     easy: 'The CPU is a touch slower and less accurate. Good for learning.',
     normal: 'The CPU plays to its ratings.',
@@ -202,8 +228,27 @@ function Gameplay() {
           <button key={s} role="radio" aria-checked={matchSecs === s} onClick={() => setMatchSecs(s)} className={`rounded py-3 font-display text-lg font-bold uppercase tracking-wider ${matchSecs === s ? 'bg-neon-400 text-ink-950' : 'bg-white/10 text-mist-200 hover:bg-white/20'}`}>{s / 60} min</button>
         ))}
       </div>
-      <p className="mt-3 font-body text-sm text-mist-300">Real minutes for the full 90. There is a half-time break in the middle.</p>
+      <p className="mt-3 font-body text-sm text-mist-300">Real minutes for the full 90. There is a half-time break in the middle, and added time at the end.</p>
+
+      <h3 className="t-label mb-2 mt-6">Broadcast</h3>
+      <Row label="Goal replays (the lead-up plays back after the celebration; any key skips it)">
+        <Toggle on={replays} onChange={setReplays} />
+      </Row>
+      <Row label="Commentary captions">
+        <Toggle on={commentary} onChange={setCommentary} />
+      </Row>
+      <p className="mt-3 font-body text-sm text-mist-300">Replays and commentary are used in World Cup matches and friendlies against the CPU.</p>
     </>
+  );
+}
+
+/** An on/off switch. */
+function Toggle({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <button role="switch" aria-checked={on} onClick={() => onChange(!on)} className={`relative h-8 w-14 rounded-full transition-colors ${on ? 'bg-neon-400' : 'bg-white/20'}`}>
+      <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${on ? 'left-7' : 'left-1'}`} />
+      <span className="sr-only">{on ? 'On' : 'Off'}</span>
+    </button>
   );
 }
 
@@ -211,7 +256,7 @@ function Audio() {
   const { muted, setSoundMuted } = useSettings();
   return (
     <>
-      <Row label="Sound effects (menu sounds, whistle, goal)">
+      <Row label="Sound (menu sounds, whistle, goal and the stadium crowd)">
         <button role="switch" aria-checked={!muted} onClick={() => { setSoundMuted(!muted); if (muted) setTimeout(sfx.select, 30); }} className={`relative h-8 w-14 rounded-full transition-colors ${muted ? 'bg-white/20' : 'bg-neon-400'}`}>
           <span className={`absolute top-1 h-6 w-6 rounded-full bg-white shadow transition-all ${muted ? 'left-1' : 'left-7'}`} />
           <span className="sr-only">{muted ? 'Off' : 'On'}</span>

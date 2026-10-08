@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { toast, useToasterStore } from 'react-hot-toast';
 import { useSession } from '@/client/api/session';
+import { useLive, useLiveConnected } from '@/client/net/live';
 import { acceptFriend, getFriends, removeFriend, type FriendsView, type Invite, type Person } from '@/client/api/social';
 import { Avatar } from './controls';
 import { sfx } from './sfx';
@@ -45,13 +46,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
   const session = useSession();
   const navigate = useNavigate();
   const signedIn = session.status === 'in';
-  const { data } = useQuery({
+  const live = useLiveConnected();
+  // With the live socket open the server pushes changes; the slow poll only keeps the online dots fresh.
+  const { data, refetch } = useQuery({
     queryKey: ['friends'],
     queryFn: getFriends,
     enabled: signedIn,
-    refetchInterval: () => (document.hidden ? 30_000 : 6_000),
+    refetchInterval: () => (document.hidden ? 30_000 : live ? 20_000 : 6_000),
     refetchOnWindowFocus: true,
   });
+  useLive(signedIn ? ['friends'] : [], () => void refetch());
 
   // Toast what is new since the last poll. Invites are live and short-lived, so one waiting on first
   // load still gets its toast; friend requests from before the page opened stay in the bell.

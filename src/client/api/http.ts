@@ -150,6 +150,12 @@ function refresh(): Promise<boolean> {
   return refreshing;
 }
 
+/** A current access token (refreshed if it is about to expire), or null when signed out. */
+export async function freshToken(): Promise<string | null> {
+  if (auth && auth.expiresAt - Date.now() < 30_000) await refresh();
+  return auth?.token ?? null;
+}
+
 /** Call an endpoint without credentials (sign-in and registration). */
 export const callPublic = <T>(path: string, body?: unknown) => post<T>(path, body);
 

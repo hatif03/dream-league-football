@@ -8,6 +8,7 @@ import { Avatar, Btn } from '@/client/ui/controls';
 import { Flag } from '@/client/ui/Flag';
 import { useDialog } from '@/client/ui/Dialog';
 import { useNotifications } from '@/client/ui/Notifications';
+import { useLive, useLiveConnected } from '@/client/net/live';
 import { blockPlayer, getChat, removeFriend, requestFriend, sendChat, type ChatLine, type FriendsView } from '@/client/api/social';
 
 /** A modal grid of nations to choose from (the opponent's nation is greyed out). */
@@ -139,17 +140,24 @@ export function RoomChat({ lobbyId }: { lobbyId: string }) {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [text, setText] = useState('');
   const box = useRef<HTMLDivElement>(null);
+  const live = useLiveConnected();
+  const loadRef = useRef<() => unknown>(() => {});
 
   useEffect(() => {
     let alive = true;
     const load = () => getChat(lobbyId).then((l) => alive && setLines(l)).catch(() => {});
+    loadRef.current = load;
     void load();
-    const t = window.setInterval(load, 2000);
+    const t = window.setInterval(load, live ? 10_000 : 2000);
     return () => {
       alive = false;
       window.clearInterval(t);
     };
-  }, [lobbyId]);
+  }, [lobbyId, live]);
+  // The server says when a chat line arrives.
+  useLive(['chat'], (id) => {
+    if (!id || id === lobbyId) void loadRef.current();
+  });
   useEffect(() => {
     box.current?.scrollTo({ top: box.current.scrollHeight });
   }, [lines.length]);

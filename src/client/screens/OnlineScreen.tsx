@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
+import { useQueryClient } from '@tanstack/react-query';
 import QRCode from 'qrcode';
 import { Check, Copy, Share2 } from 'lucide-react';
 import { teamById } from '@/client/game/teams';
@@ -12,10 +13,12 @@ import { useDialog } from '@/client/ui/Dialog';
 import { useHints } from '@/client/ui/hints';
 import { sfx } from '@/client/ui/sfx';
 import { useSession } from '@/client/api/session';
-import { useHistory } from '@/client/api/queries';
+import { useDailyChallenge, useHistory } from '@/client/api/queries';
 import { createLobby, getLobby, joinLobby, leaveLobby, leaveLobbyOnUnload, setNation, setReady, type LobbyView } from '@/client/api/friend';
 import { getLiveStatus, inviteFriend, type LiveStatus } from '@/client/api/social';
+import { useLive, useLiveConnected } from '@/client/net/live';
 import { FriendsList, NationModal, RoomChat } from './online/parts';
+import { DailyCard, MODE_NAME, ModeToggle, QuickMatch, type GameMode } from './online/QuickMatch';
 import { useMatch } from './matchContext';
 
 const KEY = 'wc2026.room';
@@ -109,8 +112,23 @@ export default function OnlineScreen() {
 
 function Hub({ busy, setBusy, maintenance, onRoom }: { busy: boolean; setBusy: (b: boolean) => void; maintenance: string | null; onRoom: (v: LobbyView) => void }) {
   const [code, setCode] = useState('');
+  const [mode, setMode] = useState<GameMode>('match');
   const history = useHistory(5);
+  const daily = useDailyChallenge();
+  const match = useMatch();
+  const session = useSession();
+  const qc = useQueryClient();
   useHints([{ kb: 'Enter', pad: 'A', label: 'Select' }]);
+
+  // A pairing from matchmaking starts the game straight away: the room is already live.
+  const onFound = useCallback(
+    (v: LobbyView) => {
+      toast.success(`Opponent found: ${v.youAreHost ? v.guestName : v.hostName}`);
+      void qc.invalidateQueries({ queryKey: ['daily'] });
+      match.start({ kind: v.lobby.mode === 'penalties' ? 'duel' : 'friend', view: v, returnTo: '/online' });
+    },
+    [match, qc],
+  );
 
   const guard = async (fn: () => Promise<LobbyView>) => {
     setBusy(true);
@@ -134,18 +152,27 @@ function Hub({ busy, setBusy, maintenance, onRoom }: { busy: boolean; setBusy: (
     <div className="mx-auto max-w-6xl px-4 py-5 md:py-8">
       <div className="mb-4">
         <div className="t-label">Online</div>
-        <h1 className="t-display text-4xl text-white md:text-6xl">Play a friend</h1>
+        <h1 className="t-display text-4xl text-white md:text-6xl">Play online</h1>
       </div>
       {maintenance && <p role="status" className="mb-4 rounded bg-gold-500/20 px-4 py-2 font-body text-sm text-gold-400">{maintenance}</p>}
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <span className="t-label">Game</span>
+        <ModeToggle mode={mode} onChange={setMode} disabled={busy} />
+        <span className="font-body text-sm text-mist-300">
+          {mode === 'match' ? 'A full 11 v 11 match, played live.' : 'Five penalties each. The server is the referee, so nobody can cheat.'}
+        </span>
+      </div>
+
       <div className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
         <div className="space-y-5">
+          <QuickMatch mode={mode} disabled={busy || !!maintenance} onFound={onFound} rating={session.status === 'in' ? session.profile.rating : undefined} />
           <div className="grid gap-4 sm:grid-cols-2">
-            <Tile accent="#28e4ff" disabled={busy || !!maintenance} onClick={() => guard(createLobby)} autoFocus data-autofocus="" className="min-h-[240px]">
+            <Tile accent="#28e4ff" disabled={busy || !!maintenance} onClick={() => guard(() => createLobby(mode))} className="min-h-[240px]">
               <div className="flex flex-1 items-center justify-center bg-[radial-gradient(circle_at_50%_40%,rgba(40,228,255,0.25),transparent_65%)] p-4"><VersusArt className="h-32 w-auto" /></div>
               <div className="bg-ink-950/45 p-4">
                 <div className="t-display text-3xl text-white">Create a room</div>
-                <div className="font-body text-sm text-mist-300">You get a code and a link. Send it to a friend.</div>
+                <div className="font-body text-sm text-mist-300">{MODE_NAME[mode]}. You get a code and a link to send to a friend.</div>
               </div>
             </Tile>
             <div className="tile flex-col cursor-default" style={{ ['--accent' as string]: '#ff3d8b' }}>
@@ -206,11 +233,13 @@ function Hub({ busy, setBusy, maintenance, onRoom }: { busy: boolean; setBusy: (
           </section>
         </div>
 
+        <div className="space-y-5">
+        <DailyCard c={daily.data} />
         <FriendsList
           action={(p) => (
             <Btn size="sm" variant="primary" disabled={busy || !!maintenance || !p.online} title={p.online ? `Create a room and invite ${p.name}` : `${p.name} is offline`}
               onClick={() => guard(async () => {
-                const v = await createLobby();
+                const v = await createLobby(mode);
                 await inviteFriend(p.userId, v.lobby.id).catch((e) => toast.error((e as Error).message));
                 toast.success(`Invited ${p.name}`);
                 return v;
@@ -220,6 +249,7 @@ function Hub({ busy, setBusy, maintenance, onRoom }: { busy: boolean; setBusy: (
             </Btn>
           )}
         />
+        </div>
       </div>
     </div>
   );
@@ -249,10 +279,11 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
 
   const apply = useCallback((v: LobbyView) => setView(v), []);
 
-  // Poll the room; announce arrivals, departures and a closed room the moment they happen.
-  useEffect(() => {
+  // Refetch the room; announce arrivals, departures and a closed room the moment they happen.
+  const liveSocket = useLiveConnected();
+  const refreshRoom = useCallback(async () => {
     if (started.current) return;
-    const t = window.setInterval(async () => {
+    {
       try {
         const v = await getLobby(lobby.id);
         const p = prev.current;
@@ -274,9 +305,17 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
       } catch {
         /* a missed poll is fine; the next catches up */
       }
-    }, 1000);
-    return () => window.clearInterval(t);
+    }
   }, [lobby.id, youAreHost, dialog, onLeft]);
+
+  // The server pushes "room changed" over the live socket; a slow poll covers a dropped socket.
+  useLive(['lobby'], (id) => {
+    if (!id || id === lobby.id) void refreshRoom();
+  });
+  useEffect(() => {
+    const t = window.setInterval(() => void refreshRoom(), liveSocket ? 8000 : 1000);
+    return () => window.clearInterval(t);
+  }, [refreshRoom, liveSocket]);
 
   // Closing the tab while waiting frees the room (and tells the other player) straight away.
   useEffect(() => {
@@ -296,7 +335,7 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
       n -= 1;
       if (n <= 0) {
         window.clearInterval(t);
-        match.start({ kind: 'friend', view, returnTo: '/online' });
+        match.start({ kind: view.lobby.mode === 'penalties' ? 'duel' : 'friend', view, returnTo: '/online' });
       } else {
         sfx.tick();
         setCount(n);
@@ -339,7 +378,7 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
     <div className="mx-auto max-w-6xl px-4 py-5 md:py-6">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="t-label">Friendly match · {youAreHost ? 'You are hosting' : `${view.hostName} is hosting`}</div>
+          <div className="t-label">{lobby.mode === 'penalties' ? 'Penalty duel' : 'Friendly match'} · {youAreHost ? 'You are hosting' : `${view.hostName} is hosting`}</div>
           <h1 className="t-display text-4xl text-white md:text-5xl">Room {lobby.code}</h1>
         </div>
         <Btn data-back onClick={leave}>{youAreHost && view.guestName ? 'Close room' : 'Leave room'}</Btn>
@@ -367,11 +406,19 @@ function Lobby({ initial, onLeft }: { initial: LobbyView; onLeft: () => void }) 
         {theirName ? (
           <section className="glass p-4">
             <h2 className="t-display mb-2 text-2xl text-white">How it works</h2>
-            <ul className="list-disc space-y-1 pl-5 font-body text-sm text-mist-200">
-              <li>A match is 90 minutes in about three real minutes. A draw stays a draw.</li>
-              <li>{youAreHost ? 'Your browser runs the match for both of you, so keep this tab open.' : `${view.hostName}'s browser runs the match; you play over a direct link.`}</li>
-              <li>If someone leaves, the other player is told straight away and no win is given.</li>
-            </ul>
+            {lobby.mode === 'penalties' ? (
+              <ul className="list-disc space-y-1 pl-5 font-body text-sm text-mist-200">
+                <li>Five penalties each, then sudden death. You take turns to shoot and to dive.</li>
+                <li>Each kick, both players pick one of six zones in secret. The server is the referee and draws the result.</li>
+                <li>You have 25 seconds per kick. Wins and losses move your rating.</li>
+              </ul>
+            ) : (
+              <ul className="list-disc space-y-1 pl-5 font-body text-sm text-mist-200">
+                <li>A match is 90 minutes in about three real minutes. A draw stays a draw.</li>
+                <li>{youAreHost ? 'Your browser runs the match for both of you, so keep this tab open.' : `${view.hostName}'s browser runs the match; you play over a direct link.`}</li>
+                <li>If someone leaves, the other player is told straight away and no win is given.</li>
+              </ul>
+            )}
           </section>
         ) : (
           <FriendsInvite lobbyId={lobby.id} />
