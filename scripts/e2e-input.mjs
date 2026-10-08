@@ -72,6 +72,37 @@ const playerX = (page) => page.evaluate(() => window.__game.current.controlled.x
   await ctx.close();
 }
 
+// ---- the EA FC WASD layout ------------------------------------------------------
+{
+  const ctx = await browser.newContext({ viewport: { width: 1400, height: 900 } });
+  const page = await ctx.newPage();
+  watch(page);
+  await page.goto(`${APP}/settings`);
+  await page.getByRole('radio', { name: /EA FC default \(WASD\)/ }).click();
+  assert.equal(await page.getByRole('radio', { name: /EA FC default/ }).getAttribute('aria-checked'), 'true');
+  await page.goto(`${APP}/practice`);
+  await page.getByRole('button', { name: /Start practice/ }).click();
+  await page.getByRole('button', { name: /Kick off/ }).click();
+  await page.waitForFunction(() => window.__game?.current);
+  await page.waitForTimeout(1200);
+  const x0 = await playerX(page);
+  await page.keyboard.down('KeyD'); // move right in this layout
+  await page.waitForTimeout(900);
+  const x1 = await playerX(page);
+  await page.keyboard.up('KeyD');
+  assert.ok(x1 > x0 + 30, `D moves right in the WASD layout (${x0} -> ${x1})`);
+  // ';' is shoot: holding it charges the power bar; P sprints and must not open the pause menu.
+  await page.keyboard.down('Semicolon');
+  await page.waitForTimeout(350);
+  const charge = await page.evaluate(() => window.__game.current.chargeLevel());
+  await page.keyboard.up('Semicolon');
+  assert.ok(charge && charge > 0.1, `; charges a shot (${charge})`);
+  await page.keyboard.press('KeyP');
+  assert.equal(await page.getByRole('dialog', { name: 'Paused' }).count(), 0, 'P is sprint, not pause');
+  console.log('WASD layout ok, charge', charge);
+  await ctx.close();
+}
+
 // ---- touch ------------------------------------------------------------------
 {
   const ctx = await browser.newContext({ viewport: { width: 900, height: 480 }, hasTouch: true, isMobile: true });

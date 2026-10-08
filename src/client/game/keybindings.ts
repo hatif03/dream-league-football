@@ -35,6 +35,42 @@ export const DEFAULT_BINDINGS: KeyBindings = {
   contain: 'KeyC',
 };
 
+/**
+ * Ready-made layouts, taken from EA SPORTS FC's own keyboard settings so they feel familiar.
+ *  - classic: EA's "Arrows" layout (arrow keys move; S ground pass, A lob/cross and slide, W through
+ *    pass, D shoot and tackle, E sprint, Q change player, C jockey). It is the game's default.
+ *  - wasd: EA's current default (WASD moves; L ground pass, K lob/cross and slide, O through pass,
+ *    ; shoot and tackle, P sprint, I change player, / jockey).
+ */
+export const KEYBOARD_PRESETS: { id: 'classic' | 'wasd'; label: string; note: string; bindings: KeyBindings }[] = [
+  { id: 'classic', label: 'FIFA classic', note: 'Arrow keys to move, S A W D to play', bindings: { ...DEFAULT_BINDINGS } },
+  {
+    id: 'wasd',
+    label: 'EA FC default (WASD)',
+    note: 'WASD to move, the right-hand keys L K O ; P to play',
+    bindings: {
+      moveUp: 'KeyW',
+      moveDown: 'KeyS',
+      moveLeft: 'KeyA',
+      moveRight: 'KeyD',
+      sprint: 'KeyP',
+      shot: 'Semicolon',
+      shortPass: 'KeyL',
+      longPass: 'KeyK',
+      throughPass: 'KeyO',
+      switchPlayer: 'KeyI',
+      contain: 'Slash',
+    },
+  },
+];
+
+/** Which preset these bindings are, or 'custom'. */
+export function presetOf(b: KeyBindings): 'classic' | 'wasd' | 'custom' {
+  for (const p of KEYBOARD_PRESETS) if (ACTIONS_EQUAL(p.bindings, b)) return p.id;
+  return 'custom';
+}
+const ACTIONS_EQUAL = (a: KeyBindings, b: KeyBindings) => (Object.keys(a) as GameAction[]).every((k) => a[k] === b[k]);
+
 export const ACTION_ORDER: GameAction[] = [
   'moveUp',
   'moveDown',

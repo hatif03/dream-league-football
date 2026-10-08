@@ -52,14 +52,18 @@ export const PAD_ACTIONS: { action: PadAction; label: string }[] = [
   { action: 'contain', label: 'Contain (hold)' },
 ];
 
-/** FIFA-style layout on a standard (Xbox-like) pad: A pass, B shot, X long, Y through, RB sprint, LB switch, LT contain. */
+/**
+ * EA SPORTS FC's layout on an Xbox-style pad: A ground pass, B shoot (and tackle without the ball), X lob pass /
+ * cross (and slide tackle), Y through ball, RT sprint, LB change player (also the lob modifier: LB + Y is a lofted
+ * through ball), LT jockey. PlayStation: X, Circle, Square, Triangle, R2, L1, L2.
+ */
 export const DEFAULT_PAD: PadBindings = {
   shortPass: 0,
   shot: 1,
   longPass: 2,
   throughPass: 3,
   switchPlayer: 4,
-  sprint: 5,
+  sprint: 7,
   contain: 6,
 };
 

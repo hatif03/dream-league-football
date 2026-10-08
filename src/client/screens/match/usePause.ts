@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react';
 
-/** Esc, P and the controller's Start button toggle the pause menu while a match is on. */
+/** Esc and the controller's Start button toggle the pause menu while a match is on (P is a game key in the WASD layout). */
 export function usePauseKeys(active: boolean, toggle: () => void) {
   const fn = useRef(toggle);
   fn.current = toggle;
   useEffect(() => {
     if (!active) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.code === 'Escape' || e.code === 'KeyP') {
+      if (e.code === 'Escape') {
         if (e.repeat) return;
         e.preventDefault();
         fn.current();
