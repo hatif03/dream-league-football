@@ -1,0 +1,14 @@
+### A result a player chose to share: the picture lives in cloud storage, this row backs the /r/<id> link.
+class: SharedResult
+table: shared_result
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  userId: String
+  title: String
+  description: String
+  ### Path inside the public cloud storage.
+  imagePath: String
+  createdAt: DateTime, defaultModel=now
+indexes:
+  shared_result_user_idx:
+    fields: userId

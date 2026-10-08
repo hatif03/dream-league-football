@@ -11,6 +11,11 @@ fields:
   hostNation: String
   guestNation: String
   ### live | finished | abandoned | void
+  ### match | penalties
+  mode: String, default='match'
+  ### Rating points the host and guest won or lost when the match finished.
+  hostRatingDelta: int?
+  guestRatingDelta: int?
   status: String
   ### Each player's signed claim, as JSON: hostGoals, guestGoals, reason, leaver.
   hostClaim: String?

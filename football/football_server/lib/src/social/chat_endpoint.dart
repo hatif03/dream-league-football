@@ -2,6 +2,7 @@ import 'package:serverpod/serverpod.dart';
 
 import '../auth/current_user.dart';
 import '../generated/protocol.dart';
+import '../live/live_hub.dart';
 import '../util/rate_limit.dart';
 import 'social_util.dart';
 
@@ -21,6 +22,8 @@ class ChatEndpoint extends Endpoint {
       session,
       LobbyMessage(lobbyId: lobbyId, userId: profile.userId, text: clean),
     );
+    final lobby = await Lobby.db.findById(session, lobbyId);
+    if (lobby != null) liveHub.notify([lobby.hostUserId, lobby.guestUserId], 'chat', lobbyId.toString());
   }
 
   /// The latest lines of a room, oldest first. Lines from players the caller blocked are hidden.

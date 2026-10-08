@@ -11,16 +11,22 @@
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
+import 'package:football_client/src/protocol/friend/duel_view.dart'
+    as _i1k1uww2;
 import 'package:football_client/src/protocol/friend/lobby_view.dart'
     as _ia920rmv;
 import 'package:football_client/src/protocol/friend/match_view.dart'
     as _i4p1u5ur;
+import 'package:football_client/src/protocol/friend/queue_status.dart'
+    as _iuvlb6b0;
 import 'package:football_client/src/protocol/friend/signal_view.dart'
     as _i54q09el;
 import 'package:football_client/src/protocol/profile/user_profile.dart'
     as _ihl7iimi;
 import 'package:football_client/src/protocol/rankings/achievement_view.dart'
     as _iqx1bsph;
+import 'package:football_client/src/protocol/rankings/challenge_view.dart'
+    as _iufwcfuk;
 import 'package:football_client/src/protocol/rankings/leaderboard_view.dart'
     as _ib83d9xt;
 import 'package:football_client/src/protocol/social/admin_stats.dart'
@@ -33,6 +39,8 @@ import 'package:football_client/src/protocol/social/live_status.dart'
     as _i23azn6q;
 import 'package:football_client/src/protocol/social/record_view.dart'
     as _imm1597n;
+import 'package:football_client/src/protocol/social/share_link.dart'
+    as _im0wvngs;
 import 'package:football_client/src/protocol/tournament/tournament_view.dart'
     as _icans0sd;
 import 'package:http/http.dart' as _i85jenna;
@@ -449,13 +457,19 @@ class EndpointLobby extends _isc.EndpointRef {
   @override
   String get name => 'lobby';
 
-  /// Opens a room; the caller is the host (their browser runs the simulation).
-  _ida.Future<_ia920rmv.LobbyView> create(String clientVersion) =>
-      caller.callServerEndpoint<_ia920rmv.LobbyView>(
-        'lobby',
-        'create',
-        {'clientVersion': clientVersion},
-      );
+  /// Opens a room; the caller is the host (their browser runs the simulation of a full match).
+  /// [mode] is `match` (the default) or `penalties`, a penalty duel the server referees.
+  _ida.Future<_ia920rmv.LobbyView> create(
+    String clientVersion,
+    String? mode,
+  ) => caller.callServerEndpoint<_ia920rmv.LobbyView>(
+    'lobby',
+    'create',
+    {
+      'clientVersion': clientVersion,
+      'mode': mode,
+    },
+  );
 
   /// Joins an open room by its code as the guest.
   _ida.Future<_ia920rmv.LobbyView> join(
@@ -523,6 +537,81 @@ class EndpointLobby extends _isc.EndpointRef {
       'lobbyId': lobbyId,
       'clientVersion': clientVersion,
     },
+  );
+}
+
+/// The penalty duel: the server is the referee. Each kick, the shooter picks where to shoot and the
+/// keeper where to dive, both in secret; when both have chosen the server draws the result with its own
+/// randomness. Nothing runs in a browser that a player could tamper with, and neither side has a
+/// latency advantage.
+/// {@category Endpoint}
+class EndpointPenalty extends _isc.EndpointRef {
+  EndpointPenalty(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'penalty';
+
+  /// The duel as the caller sees it. Also settles a kick whose time has run out.
+  _ida.Future<_i1k1uww2.DuelView> state(_isc.UuidValue matchId) =>
+      caller.callServerEndpoint<_i1k1uww2.DuelView>(
+        'penalty',
+        'state',
+        {'matchId': matchId},
+      );
+
+  /// The caller's choice for kick [seq]: a zone from 0 to 5 (shoot there, or dive there).
+  /// Choosing again for the same kick changes nothing.
+  _ida.Future<_i1k1uww2.DuelView> submit(
+    _isc.UuidValue matchId,
+    int seq,
+    int zone,
+  ) => caller.callServerEndpoint<_i1k1uww2.DuelView>(
+    'penalty',
+    'submit',
+    {
+      'matchId': matchId,
+      'seq': seq,
+      'zone': zone,
+    },
+  );
+}
+
+/// Find an opponent without needing a friend: players press "Find a match", the server pairs two who are
+/// waiting for the same game with a similar rating (a wider net the longer they wait), seats them in a
+/// room with nations chosen for them, and starts the match.
+/// {@category Endpoint}
+class EndpointMatchmaking extends _isc.EndpointRef {
+  EndpointMatchmaking(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'matchmaking';
+
+  /// Joins the queue for [mode] (`match` or `penalties`) and returns where things stand.
+  _ida.Future<_iuvlb6b0.QueueStatus> join(
+    String mode,
+    String clientVersion,
+  ) => caller.callServerEndpoint<_iuvlb6b0.QueueStatus>(
+    'matchmaking',
+    'join',
+    {
+      'mode': mode,
+      'clientVersion': clientVersion,
+    },
+  );
+
+  /// Where the caller's search stands. Asking also keeps the search alive and tries to pair again.
+  _ida.Future<_iuvlb6b0.QueueStatus> status() =>
+      caller.callServerEndpoint<_iuvlb6b0.QueueStatus>(
+        'matchmaking',
+        'status',
+        {},
+      );
+
+  /// Stops searching. A match that was already found stays.
+  _ida.Future<void> cancel() => caller.callServerEndpoint<void>(
+    'matchmaking',
+    'cancel',
+    {},
   );
 }
 
@@ -614,6 +703,23 @@ class EndpointProfile extends _isc.EndpointRef {
   );
 }
 
+/// The daily challenge: one goal a day, the same for everybody, derived from the date. Progress and the
+/// streak are computed from the finished online matches already stored, so nothing extra is written.
+/// {@category Endpoint}
+class EndpointChallenges extends _isc.EndpointRef {
+  EndpointChallenges(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'challenges';
+
+  _ida.Future<_iufwcfuk.ChallengeView> today() =>
+      caller.callServerEndpoint<_iufwcfuk.ChallengeView>(
+        'challenges',
+        'today',
+        {},
+      );
+}
+
 /// Rankings and achievements, both derived from the matches and World Cup runs already stored.
 /// {@category Endpoint}
 class EndpointRankings extends _isc.EndpointRef {
@@ -622,13 +728,19 @@ class EndpointRankings extends _isc.EndpointRef {
   @override
   String get name => 'rankings';
 
-  /// The top [limit] players (at most 50) and the caller's own row.
-  _ida.Future<_ib83d9xt.LeaderboardView> leaderboard(int limit) =>
-      caller.callServerEndpoint<_ib83d9xt.LeaderboardView>(
-        'rankings',
-        'leaderboard',
-        {'limit': limit},
-      );
+  /// The top [limit] players (at most 50) and the caller's own row, ranked `by` `rating` (Elo, from friend matches
+  /// and penalty duels) or `points` (wins, draws and World Cup titles).
+  _ida.Future<_ib83d9xt.LeaderboardView> leaderboard(
+    int limit,
+    String? by,
+  ) => caller.callServerEndpoint<_ib83d9xt.LeaderboardView>(
+    'rankings',
+    'leaderboard',
+    {
+      'limit': limit,
+      'by': by,
+    },
+  );
 
   /// Every achievement with the caller's progress.
   _ida.Future<List<_iqx1bsph.AchievementView>> achievements() =>
@@ -766,6 +878,32 @@ class EndpointReport extends _isc.EndpointRef {
   );
 }
 
+/// Sharing a result as a link. The picture of the score is kept in Serverpod's cloud storage and the link
+/// `/r/<id>` (served by [ShareRoute]) is a small page whose Open Graph tags make chat apps and social
+/// networks show the picture as a preview.
+/// {@category Endpoint}
+class EndpointShare extends _isc.EndpointRef {
+  EndpointShare(_isc.EndpointCaller caller) : super(caller);
+
+  @override
+  String get name => 'share';
+
+  /// Stores a result image (a PNG sent as base64, at most 400 KB) and returns the link id and the image's public URL.
+  _ida.Future<_im0wvngs.ShareLink> createResult(
+    String pngBase64,
+    String title,
+    String description,
+  ) => caller.callServerEndpoint<_im0wvngs.ShareLink>(
+    'share',
+    'createResult',
+    {
+      'pngBase64': pngBase64,
+      'title': title,
+      'description': description,
+    },
+  );
+}
+
 /// {@category Endpoint}
 class EndpointTournament extends _isc.EndpointRef {
   EndpointTournament(_isc.EndpointCaller caller) : super(caller);
@@ -871,11 +1009,15 @@ class Client extends _isc.ServerpodClientShared {
     jwtRefresh = EndpointJwtRefresh(this);
     friendMatch = EndpointFriendMatch(this);
     lobby = EndpointLobby(this);
+    penalty = EndpointPenalty(this);
+    matchmaking = EndpointMatchmaking(this);
     profile = EndpointProfile(this);
+    challenges = EndpointChallenges(this);
     rankings = EndpointRankings(this);
     chat = EndpointChat(this);
     friends = EndpointFriends(this);
     report = EndpointReport(this);
+    share = EndpointShare(this);
     tournament = EndpointTournament(this);
     modules = Modules(this);
   }
@@ -892,7 +1034,13 @@ class Client extends _isc.ServerpodClientShared {
 
   late final EndpointLobby lobby;
 
+  late final EndpointPenalty penalty;
+
+  late final EndpointMatchmaking matchmaking;
+
   late final EndpointProfile profile;
+
+  late final EndpointChallenges challenges;
 
   late final EndpointRankings rankings;
 
@@ -901,6 +1049,8 @@ class Client extends _isc.ServerpodClientShared {
   late final EndpointFriends friends;
 
   late final EndpointReport report;
+
+  late final EndpointShare share;
 
   late final EndpointTournament tournament;
 
@@ -914,11 +1064,15 @@ class Client extends _isc.ServerpodClientShared {
     'jwtRefresh': jwtRefresh,
     'friendMatch': friendMatch,
     'lobby': lobby,
+    'penalty': penalty,
+    'matchmaking': matchmaking,
     'profile': profile,
+    'challenges': challenges,
     'rankings': rankings,
     'chat': chat,
     'friends': friends,
     'report': report,
+    'share': share,
     'tournament': tournament,
   };
 

@@ -11,6 +11,8 @@ fields:
   guestNation: String?
   hostReady: bool
   guestReady: bool
+  ### match (a full 11 v 11) | penalties (a server-refereed penalty duel)
+  mode: String, default='match'
   ### open | live | closed
   status: String
   ### Both players must run the same build; the join is refused otherwise.

@@ -22,14 +22,21 @@ import 'package:serverpod_auth_core_client/serverpod_auth_core_client.dart'
 import 'package:serverpod_auth_idp_client/serverpod_auth_idp_client.dart'
     as _iaic;
 import 'package:serverpod_client/serverpod_client.dart' as _isc;
+import 'friend/duel_view.dart' as _ie4eb5hy;
 import 'friend/friend_match.dart' as _i61u4k1q;
+import 'friend/kick_due.dart' as _ikj0u1ic;
+import 'friend/kick_view.dart' as _i9hpe2st;
 import 'friend/lobby.dart' as _iy2evbc1;
 import 'friend/lobby_view.dart' as _iwcao3ye;
 import 'friend/match_view.dart' as _in465to7;
+import 'friend/penalty_kick.dart' as _i85b7jsg;
+import 'friend/queue_entry.dart' as _iju54wrt;
+import 'friend/queue_status.dart' as _i5f66tdj;
 import 'friend/signal_view.dart' as _iwiyctoy;
 import 'game_exception.dart' as _iva62vub;
 import 'profile/user_profile.dart' as _ik2xsncp;
 import 'rankings/achievement_view.dart' as _imlks8jq;
+import 'rankings/challenge_view.dart' as _iq5zczhp;
 import 'rankings/leader_entry.dart' as _i4ke8vzx;
 import 'rankings/leaderboard_view.dart' as _ikumlxuj;
 import 'social/admin_stats.dart' as _ih7dxm8c;
@@ -46,19 +53,28 @@ import 'social/lobby_message.dart' as _ipshgsbn;
 import 'social/person_view.dart' as _i2tinm30;
 import 'social/player_report.dart' as _i7lceyce;
 import 'social/record_view.dart' as _iaqb5f9o;
+import 'social/share_link.dart' as _ibfawpjk;
+import 'social/shared_result.dart' as _i3481sdt;
 import 'social/user_block.dart' as _ib9qj8iy;
 import 'tournament/standing_row.dart' as _ip1i4so6;
 import 'tournament/tournament.dart' as _ihp9r9tf;
 import 'tournament/tournament_fixture.dart' as _iz6ze9lg;
 import 'tournament/tournament_view.dart' as _i8117dck;
+export 'friend/duel_view.dart';
 export 'friend/friend_match.dart';
+export 'friend/kick_due.dart';
+export 'friend/kick_view.dart';
 export 'friend/lobby.dart';
 export 'friend/lobby_view.dart';
 export 'friend/match_view.dart';
+export 'friend/penalty_kick.dart';
+export 'friend/queue_entry.dart';
+export 'friend/queue_status.dart';
 export 'friend/signal_view.dart';
 export 'game_exception.dart';
 export 'profile/user_profile.dart';
 export 'rankings/achievement_view.dart';
+export 'rankings/challenge_view.dart';
 export 'rankings/leader_entry.dart';
 export 'rankings/leaderboard_view.dart';
 export 'social/admin_stats.dart';
@@ -75,6 +91,8 @@ export 'social/lobby_message.dart';
 export 'social/person_view.dart';
 export 'social/player_report.dart';
 export 'social/record_view.dart';
+export 'social/share_link.dart';
+export 'social/shared_result.dart';
 export 'social/user_block.dart';
 export 'tournament/standing_row.dart';
 export 'tournament/tournament.dart';
@@ -116,8 +134,17 @@ class Protocol extends _isc.SerializationManager {
       }
     }
 
+    if (t == _ie4eb5hy.DuelView) {
+      return _ie4eb5hy.DuelView.fromJson(data) as T;
+    }
     if (t == _i61u4k1q.FriendMatch) {
       return _i61u4k1q.FriendMatch.fromJson(data) as T;
+    }
+    if (t == _ikj0u1ic.KickDue) {
+      return _ikj0u1ic.KickDue.fromJson(data) as T;
+    }
+    if (t == _i9hpe2st.KickView) {
+      return _i9hpe2st.KickView.fromJson(data) as T;
     }
     if (t == _iy2evbc1.Lobby) {
       return _iy2evbc1.Lobby.fromJson(data) as T;
@@ -127,6 +154,15 @@ class Protocol extends _isc.SerializationManager {
     }
     if (t == _in465to7.MatchView) {
       return _in465to7.MatchView.fromJson(data) as T;
+    }
+    if (t == _i85b7jsg.PenaltyKick) {
+      return _i85b7jsg.PenaltyKick.fromJson(data) as T;
+    }
+    if (t == _iju54wrt.QueueEntry) {
+      return _iju54wrt.QueueEntry.fromJson(data) as T;
+    }
+    if (t == _i5f66tdj.QueueStatus) {
+      return _i5f66tdj.QueueStatus.fromJson(data) as T;
     }
     if (t == _iwiyctoy.SignalView) {
       return _iwiyctoy.SignalView.fromJson(data) as T;
@@ -139,6 +175,9 @@ class Protocol extends _isc.SerializationManager {
     }
     if (t == _imlks8jq.AchievementView) {
       return _imlks8jq.AchievementView.fromJson(data) as T;
+    }
+    if (t == _iq5zczhp.ChallengeView) {
+      return _iq5zczhp.ChallengeView.fromJson(data) as T;
     }
     if (t == _i4ke8vzx.LeaderEntry) {
       return _i4ke8vzx.LeaderEntry.fromJson(data) as T;
@@ -188,6 +227,12 @@ class Protocol extends _isc.SerializationManager {
     if (t == _iaqb5f9o.RecordView) {
       return _iaqb5f9o.RecordView.fromJson(data) as T;
     }
+    if (t == _ibfawpjk.ShareLink) {
+      return _ibfawpjk.ShareLink.fromJson(data) as T;
+    }
+    if (t == _i3481sdt.SharedResult) {
+      return _i3481sdt.SharedResult.fromJson(data) as T;
+    }
     if (t == _ib9qj8iy.UserBlock) {
       return _ib9qj8iy.UserBlock.fromJson(data) as T;
     }
@@ -203,8 +248,17 @@ class Protocol extends _isc.SerializationManager {
     if (t == _i8117dck.TournamentView) {
       return _i8117dck.TournamentView.fromJson(data) as T;
     }
+    if (t == _isc.getType<_ie4eb5hy.DuelView?>()) {
+      return (data != null ? _ie4eb5hy.DuelView.fromJson(data) : null) as T;
+    }
     if (t == _isc.getType<_i61u4k1q.FriendMatch?>()) {
       return (data != null ? _i61u4k1q.FriendMatch.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_ikj0u1ic.KickDue?>()) {
+      return (data != null ? _ikj0u1ic.KickDue.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i9hpe2st.KickView?>()) {
+      return (data != null ? _i9hpe2st.KickView.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_iy2evbc1.Lobby?>()) {
       return (data != null ? _iy2evbc1.Lobby.fromJson(data) : null) as T;
@@ -214,6 +268,15 @@ class Protocol extends _isc.SerializationManager {
     }
     if (t == _isc.getType<_in465to7.MatchView?>()) {
       return (data != null ? _in465to7.MatchView.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i85b7jsg.PenaltyKick?>()) {
+      return (data != null ? _i85b7jsg.PenaltyKick.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_iju54wrt.QueueEntry?>()) {
+      return (data != null ? _iju54wrt.QueueEntry.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i5f66tdj.QueueStatus?>()) {
+      return (data != null ? _i5f66tdj.QueueStatus.fromJson(data) : null) as T;
     }
     if (t == _isc.getType<_iwiyctoy.SignalView?>()) {
       return (data != null ? _iwiyctoy.SignalView.fromJson(data) : null) as T;
@@ -227,6 +290,10 @@ class Protocol extends _isc.SerializationManager {
     }
     if (t == _isc.getType<_imlks8jq.AchievementView?>()) {
       return (data != null ? _imlks8jq.AchievementView.fromJson(data) : null)
+          as T;
+    }
+    if (t == _isc.getType<_iq5zczhp.ChallengeView?>()) {
+      return (data != null ? _iq5zczhp.ChallengeView.fromJson(data) : null)
           as T;
     }
     if (t == _isc.getType<_i4ke8vzx.LeaderEntry?>()) {
@@ -278,6 +345,12 @@ class Protocol extends _isc.SerializationManager {
     if (t == _isc.getType<_iaqb5f9o.RecordView?>()) {
       return (data != null ? _iaqb5f9o.RecordView.fromJson(data) : null) as T;
     }
+    if (t == _isc.getType<_ibfawpjk.ShareLink?>()) {
+      return (data != null ? _ibfawpjk.ShareLink.fromJson(data) : null) as T;
+    }
+    if (t == _isc.getType<_i3481sdt.SharedResult?>()) {
+      return (data != null ? _i3481sdt.SharedResult.fromJson(data) : null) as T;
+    }
     if (t == _isc.getType<_ib9qj8iy.UserBlock?>()) {
       return (data != null ? _ib9qj8iy.UserBlock.fromJson(data) : null) as T;
     }
@@ -293,6 +366,12 @@ class Protocol extends _isc.SerializationManager {
     }
     if (t == _isc.getType<_i8117dck.TournamentView?>()) {
       return (data != null ? _i8117dck.TournamentView.fromJson(data) : null)
+          as T;
+    }
+    if (t == List<_i9hpe2st.KickView>) {
+      return (data as List)
+              .map((e) => deserialize<_i9hpe2st.KickView>(e))
+              .toList()
           as T;
     }
     if (t == List<_i4ke8vzx.LeaderEntry>) {
@@ -360,14 +439,21 @@ class Protocol extends _isc.SerializationManager {
 
   static String? getClassNameForType(Type type) {
     return switch (type) {
+      _ie4eb5hy.DuelView => 'DuelView',
       _i61u4k1q.FriendMatch => 'FriendMatch',
+      _ikj0u1ic.KickDue => 'KickDue',
+      _i9hpe2st.KickView => 'KickView',
       _iy2evbc1.Lobby => 'Lobby',
       _iwcao3ye.LobbyView => 'LobbyView',
       _in465to7.MatchView => 'MatchView',
+      _i85b7jsg.PenaltyKick => 'PenaltyKick',
+      _iju54wrt.QueueEntry => 'QueueEntry',
+      _i5f66tdj.QueueStatus => 'QueueStatus',
       _iwiyctoy.SignalView => 'SignalView',
       _iva62vub.GameException => 'GameException',
       _ik2xsncp.UserProfile => 'UserProfile',
       _imlks8jq.AchievementView => 'AchievementView',
+      _iq5zczhp.ChallengeView => 'ChallengeView',
       _i4ke8vzx.LeaderEntry => 'LeaderEntry',
       _ikumlxuj.LeaderboardView => 'LeaderboardView',
       _ih7dxm8c.AdminStats => 'AdminStats',
@@ -384,6 +470,8 @@ class Protocol extends _isc.SerializationManager {
       _i2tinm30.PersonView => 'PersonView',
       _i7lceyce.PlayerReport => 'PlayerReport',
       _iaqb5f9o.RecordView => 'RecordView',
+      _ibfawpjk.ShareLink => 'ShareLink',
+      _i3481sdt.SharedResult => 'SharedResult',
       _ib9qj8iy.UserBlock => 'UserBlock',
       _ip1i4so6.StandingRow => 'StandingRow',
       _ihp9r9tf.Tournament => 'Tournament',
@@ -403,14 +491,26 @@ class Protocol extends _isc.SerializationManager {
     }
 
     switch (data) {
+      case _ie4eb5hy.DuelView():
+        return 'DuelView';
       case _i61u4k1q.FriendMatch():
         return 'FriendMatch';
+      case _ikj0u1ic.KickDue():
+        return 'KickDue';
+      case _i9hpe2st.KickView():
+        return 'KickView';
       case _iy2evbc1.Lobby():
         return 'Lobby';
       case _iwcao3ye.LobbyView():
         return 'LobbyView';
       case _in465to7.MatchView():
         return 'MatchView';
+      case _i85b7jsg.PenaltyKick():
+        return 'PenaltyKick';
+      case _iju54wrt.QueueEntry():
+        return 'QueueEntry';
+      case _i5f66tdj.QueueStatus():
+        return 'QueueStatus';
       case _iwiyctoy.SignalView():
         return 'SignalView';
       case _iva62vub.GameException():
@@ -419,6 +519,8 @@ class Protocol extends _isc.SerializationManager {
         return 'UserProfile';
       case _imlks8jq.AchievementView():
         return 'AchievementView';
+      case _iq5zczhp.ChallengeView():
+        return 'ChallengeView';
       case _i4ke8vzx.LeaderEntry():
         return 'LeaderEntry';
       case _ikumlxuj.LeaderboardView():
@@ -451,6 +553,10 @@ class Protocol extends _isc.SerializationManager {
         return 'PlayerReport';
       case _iaqb5f9o.RecordView():
         return 'RecordView';
+      case _ibfawpjk.ShareLink():
+        return 'ShareLink';
+      case _i3481sdt.SharedResult():
+        return 'SharedResult';
       case _ib9qj8iy.UserBlock():
         return 'UserBlock';
       case _ip1i4so6.StandingRow():
@@ -483,8 +589,17 @@ class Protocol extends _isc.SerializationManager {
     if (dataClassName is! String) {
       return super.deserializeByClassName(data);
     }
+    if (dataClassName == 'DuelView') {
+      return deserialize<_ie4eb5hy.DuelView>(data['data']);
+    }
     if (dataClassName == 'FriendMatch') {
       return deserialize<_i61u4k1q.FriendMatch>(data['data']);
+    }
+    if (dataClassName == 'KickDue') {
+      return deserialize<_ikj0u1ic.KickDue>(data['data']);
+    }
+    if (dataClassName == 'KickView') {
+      return deserialize<_i9hpe2st.KickView>(data['data']);
     }
     if (dataClassName == 'Lobby') {
       return deserialize<_iy2evbc1.Lobby>(data['data']);
@@ -494,6 +609,15 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'MatchView') {
       return deserialize<_in465to7.MatchView>(data['data']);
+    }
+    if (dataClassName == 'PenaltyKick') {
+      return deserialize<_i85b7jsg.PenaltyKick>(data['data']);
+    }
+    if (dataClassName == 'QueueEntry') {
+      return deserialize<_iju54wrt.QueueEntry>(data['data']);
+    }
+    if (dataClassName == 'QueueStatus') {
+      return deserialize<_i5f66tdj.QueueStatus>(data['data']);
     }
     if (dataClassName == 'SignalView') {
       return deserialize<_iwiyctoy.SignalView>(data['data']);
@@ -506,6 +630,9 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'AchievementView') {
       return deserialize<_imlks8jq.AchievementView>(data['data']);
+    }
+    if (dataClassName == 'ChallengeView') {
+      return deserialize<_iq5zczhp.ChallengeView>(data['data']);
     }
     if (dataClassName == 'LeaderEntry') {
       return deserialize<_i4ke8vzx.LeaderEntry>(data['data']);
@@ -554,6 +681,12 @@ class Protocol extends _isc.SerializationManager {
     }
     if (dataClassName == 'RecordView') {
       return deserialize<_iaqb5f9o.RecordView>(data['data']);
+    }
+    if (dataClassName == 'ShareLink') {
+      return deserialize<_ibfawpjk.ShareLink>(data['data']);
+    }
+    if (dataClassName == 'SharedResult') {
+      return deserialize<_i3481sdt.SharedResult>(data['data']);
     }
     if (dataClassName == 'UserBlock') {
       return deserialize<_ib9qj8iy.UserBlock>(data['data']);

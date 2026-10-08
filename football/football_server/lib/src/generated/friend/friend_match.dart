@@ -23,6 +23,9 @@ abstract class FriendMatch
     this.guestUserId,
     required this.hostNation,
     required this.guestNation,
+    String? mode,
+    this.hostRatingDelta,
+    this.guestRatingDelta,
     required this.status,
     this.hostClaim,
     this.guestClaim,
@@ -38,7 +41,8 @@ abstract class FriendMatch
     DateTime? startedAt,
     this.firstClaimAt,
     this.endedAt,
-  }) : startedAt = startedAt ?? DateTime.now();
+  }) : mode = mode ?? 'match',
+       startedAt = startedAt ?? DateTime.now();
 
   factory FriendMatch({
     _is.UuidValue? id,
@@ -47,6 +51,9 @@ abstract class FriendMatch
     String? guestUserId,
     required String hostNation,
     required String guestNation,
+    String? mode,
+    int? hostRatingDelta,
+    int? guestRatingDelta,
     required String status,
     String? hostClaim,
     String? guestClaim,
@@ -76,6 +83,9 @@ abstract class FriendMatch
       guestUserId: jsonSerialization['guestUserId'] as String?,
       hostNation: jsonSerialization['hostNation'] as String,
       guestNation: jsonSerialization['guestNation'] as String,
+      mode: jsonSerialization['mode'] as String?,
+      hostRatingDelta: jsonSerialization['hostRatingDelta'] as int?,
+      guestRatingDelta: jsonSerialization['guestRatingDelta'] as int?,
       status: jsonSerialization['status'] as String,
       hostClaim: jsonSerialization['hostClaim'] as String?,
       guestClaim: jsonSerialization['guestClaim'] as String?,
@@ -121,6 +131,14 @@ abstract class FriendMatch
   String guestNation;
 
   /// live | finished | abandoned | void
+  /// match | penalties
+  String mode;
+
+  /// Rating points the host and guest won or lost when the match finished.
+  int? hostRatingDelta;
+
+  int? guestRatingDelta;
+
   String status;
 
   /// Each player's signed claim, as JSON: hostGoals, guestGoals, reason, leaver.
@@ -171,6 +189,9 @@ abstract class FriendMatch
     String? guestUserId,
     String? hostNation,
     String? guestNation,
+    String? mode,
+    int? hostRatingDelta,
+    int? guestRatingDelta,
     String? status,
     String? hostClaim,
     String? guestClaim,
@@ -197,6 +218,9 @@ abstract class FriendMatch
       if (guestUserId != null) 'guestUserId': guestUserId,
       'hostNation': hostNation,
       'guestNation': guestNation,
+      'mode': mode,
+      if (hostRatingDelta != null) 'hostRatingDelta': hostRatingDelta,
+      if (guestRatingDelta != null) 'guestRatingDelta': guestRatingDelta,
       'status': status,
       if (hostClaim != null) 'hostClaim': hostClaim,
       if (guestClaim != null) 'guestClaim': guestClaim,
@@ -225,6 +249,9 @@ abstract class FriendMatch
       if (guestUserId != null) 'guestUserId': guestUserId,
       'hostNation': hostNation,
       'guestNation': guestNation,
+      'mode': mode,
+      if (hostRatingDelta != null) 'hostRatingDelta': hostRatingDelta,
+      if (guestRatingDelta != null) 'guestRatingDelta': guestRatingDelta,
       'status': status,
       if (hostClaim != null) 'hostClaim': hostClaim,
       if (guestClaim != null) 'guestClaim': guestClaim,
@@ -281,6 +308,9 @@ class _FriendMatchImpl extends FriendMatch {
     String? guestUserId,
     required String hostNation,
     required String guestNation,
+    String? mode,
+    int? hostRatingDelta,
+    int? guestRatingDelta,
     required String status,
     String? hostClaim,
     String? guestClaim,
@@ -303,6 +333,9 @@ class _FriendMatchImpl extends FriendMatch {
          guestUserId: guestUserId,
          hostNation: hostNation,
          guestNation: guestNation,
+         mode: mode,
+         hostRatingDelta: hostRatingDelta,
+         guestRatingDelta: guestRatingDelta,
          status: status,
          hostClaim: hostClaim,
          guestClaim: guestClaim,
@@ -331,6 +364,9 @@ class _FriendMatchImpl extends FriendMatch {
     Object? guestUserId = _Undefined,
     String? hostNation,
     String? guestNation,
+    String? mode,
+    Object? hostRatingDelta = _Undefined,
+    Object? guestRatingDelta = _Undefined,
     String? status,
     Object? hostClaim = _Undefined,
     Object? guestClaim = _Undefined,
@@ -354,6 +390,13 @@ class _FriendMatchImpl extends FriendMatch {
       guestUserId: guestUserId is String? ? guestUserId : this.guestUserId,
       hostNation: hostNation ?? this.hostNation,
       guestNation: guestNation ?? this.guestNation,
+      mode: mode ?? this.mode,
+      hostRatingDelta: hostRatingDelta is int?
+          ? hostRatingDelta
+          : this.hostRatingDelta,
+      guestRatingDelta: guestRatingDelta is int?
+          ? guestRatingDelta
+          : this.guestRatingDelta,
       status: status ?? this.status,
       hostClaim: hostClaim is String? ? hostClaim : this.hostClaim,
       guestClaim: guestClaim is String? ? guestClaim : this.guestClaim,
@@ -401,6 +444,21 @@ class FriendMatchUpdateTable extends _is.UpdateTable<FriendMatchTable> {
 
   _is.ColumnValue<String, String> guestNation(String value) => _is.ColumnValue(
     table.guestNation,
+    value,
+  );
+
+  _is.ColumnValue<String, String> mode(String value) => _is.ColumnValue(
+    table.mode,
+    value,
+  );
+
+  _is.ColumnValue<int, int> hostRatingDelta(int? value) => _is.ColumnValue(
+    table.hostRatingDelta,
+    value,
+  );
+
+  _is.ColumnValue<int, int> guestRatingDelta(int? value) => _is.ColumnValue(
+    table.guestRatingDelta,
     value,
   );
 
@@ -508,6 +566,19 @@ class FriendMatchTable extends _is.Table<_is.UuidValue?> {
       'guestNation',
       this,
     );
+    mode = _is.ColumnString(
+      'mode',
+      this,
+      hasDefault: true,
+    );
+    hostRatingDelta = _is.ColumnInt(
+      'hostRatingDelta',
+      this,
+    );
+    guestRatingDelta = _is.ColumnInt(
+      'guestRatingDelta',
+      this,
+    );
     status = _is.ColumnString(
       'status',
       this,
@@ -584,6 +655,14 @@ class FriendMatchTable extends _is.Table<_is.UuidValue?> {
   late final _is.ColumnString guestNation;
 
   /// live | finished | abandoned | void
+  /// match | penalties
+  late final _is.ColumnString mode;
+
+  /// Rating points the host and guest won or lost when the match finished.
+  late final _is.ColumnInt hostRatingDelta;
+
+  late final _is.ColumnInt guestRatingDelta;
+
   late final _is.ColumnString status;
 
   /// Each player's signed claim, as JSON: hostGoals, guestGoals, reason, leaver.
@@ -629,6 +708,9 @@ class FriendMatchTable extends _is.Table<_is.UuidValue?> {
     guestUserId,
     hostNation,
     guestNation,
+    mode,
+    hostRatingDelta,
+    guestRatingDelta,
     status,
     hostClaim,
     guestClaim,

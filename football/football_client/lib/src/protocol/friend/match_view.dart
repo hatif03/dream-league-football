@@ -22,6 +22,7 @@ abstract class MatchView
     required this.hostName,
     required this.guestName,
     required this.youAreHost,
+    this.ratingDelta,
   });
 
   factory MatchView({
@@ -29,6 +30,7 @@ abstract class MatchView
     required String hostName,
     required String guestName,
     required bool youAreHost,
+    int? ratingDelta,
   }) = _MatchViewImpl;
 
   factory MatchView.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -41,6 +43,7 @@ abstract class MatchView
       youAreHost: _isc.BoolJsonExtension.fromJson(
         jsonSerialization['youAreHost'],
       ),
+      ratingDelta: jsonSerialization['ratingDelta'] as int?,
     );
   }
 
@@ -52,6 +55,9 @@ abstract class MatchView
 
   bool youAreHost;
 
+  /// The caller's rating change for this match, once it has finished.
+  int? ratingDelta;
+
   /// Returns a shallow copy of this [MatchView]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -60,6 +66,7 @@ abstract class MatchView
     String? hostName,
     String? guestName,
     bool? youAreHost,
+    int? ratingDelta,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -69,6 +76,7 @@ abstract class MatchView
       'hostName': hostName,
       'guestName': guestName,
       'youAreHost': youAreHost,
+      if (ratingDelta != null) 'ratingDelta': ratingDelta,
     };
   }
 
@@ -80,6 +88,7 @@ abstract class MatchView
       'hostName': hostName,
       'guestName': guestName,
       'youAreHost': youAreHost,
+      if (ratingDelta != null) 'ratingDelta': ratingDelta,
     };
   }
 
@@ -89,17 +98,21 @@ abstract class MatchView
   }
 }
 
+class _Undefined {}
+
 class _MatchViewImpl extends MatchView {
   _MatchViewImpl({
     required _i7tx20c1.FriendMatch match,
     required String hostName,
     required String guestName,
     required bool youAreHost,
+    int? ratingDelta,
   }) : super._(
          match: match,
          hostName: hostName,
          guestName: guestName,
          youAreHost: youAreHost,
+         ratingDelta: ratingDelta,
        );
 
   /// Returns a shallow copy of this [MatchView]
@@ -111,12 +124,14 @@ class _MatchViewImpl extends MatchView {
     String? hostName,
     String? guestName,
     bool? youAreHost,
+    Object? ratingDelta = _Undefined,
   }) {
     return MatchView(
       match: match ?? this.match.copyWith(),
       hostName: hostName ?? this.hostName,
       guestName: guestName ?? this.guestName,
       youAreHost: youAreHost ?? this.youAreHost,
+      ratingDelta: ratingDelta is int? ? ratingDelta : this.ratingDelta,
     );
   }
 }

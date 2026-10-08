@@ -1,0 +1,13 @@
+### Today's daily challenge and how far the player is.
+class: ChallengeView
+fields:
+  ### The UTC day, YYYY-MM-DD.
+  day: String
+  kind: String
+  title: String
+  description: String
+  target: int
+  progress: int
+  done: bool
+  ### Days in a row, up to yesterday (plus today if done), on which the daily challenge was completed.
+  streak: int

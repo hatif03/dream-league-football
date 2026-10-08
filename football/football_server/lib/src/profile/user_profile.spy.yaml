@@ -16,6 +16,8 @@ fields:
   settings: String?
   ### The player's club crest and kit as JSON.
   club: String?
+  ### Elo-style rating from finished friend matches and penalty duels (starts at 1000).
+  rating: int, default=1000
   ### Nation id the player supports.
   favouriteNation: String?
   createdAt: DateTime, defaultModel=now

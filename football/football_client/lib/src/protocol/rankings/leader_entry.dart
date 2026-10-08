@@ -26,6 +26,7 @@ abstract class LeaderEntry
     required this.losses,
     required this.titles,
     required this.points,
+    required this.rating,
   });
 
   factory LeaderEntry({
@@ -39,6 +40,7 @@ abstract class LeaderEntry
     required int losses,
     required int titles,
     required int points,
+    required int rating,
   }) = _LeaderEntryImpl;
 
   factory LeaderEntry.fromJson(Map<String, dynamic> jsonSerialization) {
@@ -53,6 +55,7 @@ abstract class LeaderEntry
       losses: jsonSerialization['losses'] as int,
       titles: jsonSerialization['titles'] as int,
       points: jsonSerialization['points'] as int,
+      rating: jsonSerialization['rating'] as int,
     );
   }
 
@@ -77,6 +80,8 @@ abstract class LeaderEntry
 
   int points;
 
+  int rating;
+
   /// Returns a shallow copy of this [LeaderEntry]
   /// with some or all fields replaced by the given arguments.
   @_isc.useResult
@@ -91,6 +96,7 @@ abstract class LeaderEntry
     int? losses,
     int? titles,
     int? points,
+    int? rating,
   });
   @override
   Map<String, dynamic> toJson() {
@@ -106,6 +112,7 @@ abstract class LeaderEntry
       'losses': losses,
       'titles': titles,
       'points': points,
+      'rating': rating,
     };
   }
 
@@ -123,6 +130,7 @@ abstract class LeaderEntry
       'losses': losses,
       'titles': titles,
       'points': points,
+      'rating': rating,
     };
   }
 
@@ -146,6 +154,7 @@ class _LeaderEntryImpl extends LeaderEntry {
     required int losses,
     required int titles,
     required int points,
+    required int rating,
   }) : super._(
          rank: rank,
          userId: userId,
@@ -157,6 +166,7 @@ class _LeaderEntryImpl extends LeaderEntry {
          losses: losses,
          titles: titles,
          points: points,
+         rating: rating,
        );
 
   /// Returns a shallow copy of this [LeaderEntry]
@@ -174,6 +184,7 @@ class _LeaderEntryImpl extends LeaderEntry {
     int? losses,
     int? titles,
     int? points,
+    int? rating,
   }) {
     return LeaderEntry(
       rank: rank ?? this.rank,
@@ -186,6 +197,7 @@ class _LeaderEntryImpl extends LeaderEntry {
       losses: losses ?? this.losses,
       titles: titles ?? this.titles,
       points: points ?? this.points,
+      rating: rating ?? this.rating,
     );
   }
 }

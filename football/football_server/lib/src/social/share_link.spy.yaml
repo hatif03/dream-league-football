@@ -1,0 +1,4 @@
+class: ShareLink
+fields:
+  id: String
+  imageUrl: String

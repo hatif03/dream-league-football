@@ -1,0 +1,8 @@
+### A kick as a player may see it. Until it is resolved only who shoots is shown.
+class: KickView
+fields:
+  seq: int
+  shooterIsHost: bool
+  shooterZone: int?
+  keeperZone: int?
+  outcome: String?

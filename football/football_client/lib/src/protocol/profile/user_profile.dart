@@ -24,12 +24,14 @@ abstract class UserProfile
     this.avatar,
     this.settings,
     this.club,
+    int? rating,
     this.favouriteNation,
     DateTime? createdAt,
     this.bannedUntil,
     this.termsAcceptedAt,
     this.lastSeenAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  }) : rating = rating ?? 1000,
+       createdAt = createdAt ?? DateTime.now();
 
   factory UserProfile({
     _isc.UuidValue? id,
@@ -40,6 +42,7 @@ abstract class UserProfile
     int? avatar,
     String? settings,
     String? club,
+    int? rating,
     String? favouriteNation,
     DateTime? createdAt,
     DateTime? bannedUntil,
@@ -59,6 +62,7 @@ abstract class UserProfile
       avatar: jsonSerialization['avatar'] as int?,
       settings: jsonSerialization['settings'] as String?,
       club: jsonSerialization['club'] as String?,
+      rating: jsonSerialization['rating'] as int?,
       favouriteNation: jsonSerialization['favouriteNation'] as String?,
       createdAt: jsonSerialization['createdAt'] == null
           ? null
@@ -106,6 +110,9 @@ abstract class UserProfile
   /// The player's club crest and kit as JSON.
   String? club;
 
+  /// Elo-style rating from finished friend matches and penalty duels (starts at 1000).
+  int rating;
+
   /// Nation id the player supports.
   String? favouriteNation;
 
@@ -130,6 +137,7 @@ abstract class UserProfile
     int? avatar,
     String? settings,
     String? club,
+    int? rating,
     String? favouriteNation,
     DateTime? createdAt,
     DateTime? bannedUntil,
@@ -148,6 +156,7 @@ abstract class UserProfile
       if (avatar != null) 'avatar': avatar,
       if (settings != null) 'settings': settings,
       if (club != null) 'club': club,
+      'rating': rating,
       if (favouriteNation != null) 'favouriteNation': favouriteNation,
       'createdAt': createdAt.toJson(),
       if (bannedUntil != null) 'bannedUntil': bannedUntil?.toJson(),
@@ -168,6 +177,7 @@ abstract class UserProfile
       if (avatar != null) 'avatar': avatar,
       if (settings != null) 'settings': settings,
       if (club != null) 'club': club,
+      'rating': rating,
       if (favouriteNation != null) 'favouriteNation': favouriteNation,
       'createdAt': createdAt.toJson(),
       if (bannedUntil != null) 'bannedUntil': bannedUntil?.toJson(),
@@ -194,6 +204,7 @@ class _UserProfileImpl extends UserProfile {
     int? avatar,
     String? settings,
     String? club,
+    int? rating,
     String? favouriteNation,
     DateTime? createdAt,
     DateTime? bannedUntil,
@@ -208,6 +219,7 @@ class _UserProfileImpl extends UserProfile {
          avatar: avatar,
          settings: settings,
          club: club,
+         rating: rating,
          favouriteNation: favouriteNation,
          createdAt: createdAt,
          bannedUntil: bannedUntil,
@@ -228,6 +240,7 @@ class _UserProfileImpl extends UserProfile {
     Object? avatar = _Undefined,
     Object? settings = _Undefined,
     Object? club = _Undefined,
+    int? rating,
     Object? favouriteNation = _Undefined,
     DateTime? createdAt,
     Object? bannedUntil = _Undefined,
@@ -243,6 +256,7 @@ class _UserProfileImpl extends UserProfile {
       avatar: avatar is int? ? avatar : this.avatar,
       settings: settings is String? ? settings : this.settings,
       club: club is String? ? club : this.club,
+      rating: rating ?? this.rating,
       favouriteNation: favouriteNation is String?
           ? favouriteNation
           : this.favouriteNation,

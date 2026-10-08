@@ -1,0 +1,21 @@
+### A penalty duel from one player's side.
+class: DuelView
+fields:
+  matchId: UuidValue
+  ### live | finished | abandoned | void
+  status: String
+  youAreHost: bool
+  hostName: String
+  guestName: String
+  hostGoals: int
+  guestGoals: int
+  kicks: List<KickView>
+  ### The kick being played now, or -1 once the duel is over.
+  seq: int
+  youShoot: bool
+  ### You already chose for the current kick and are waiting for the other player.
+  youSubmitted: bool
+  msLeft: int
+  ### Set when the duel is over.
+  youWon: bool?
+  ratingDelta: int?

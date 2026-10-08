@@ -1,0 +1,5 @@
+### Payload of the scheduled call that settles a kick whose time ran out.
+class: KickDue
+fields:
+  matchId: UuidValue
+  seq: int

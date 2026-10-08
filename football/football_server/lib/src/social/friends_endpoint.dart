@@ -2,6 +2,7 @@ import 'package:serverpod/serverpod.dart';
 
 import '../auth/current_user.dart';
 import '../generated/protocol.dart';
+import '../live/live_hub.dart';
 import '../util/rate_limit.dart';
 import 'social_util.dart';
 
@@ -85,12 +86,14 @@ class FriendsEndpoint extends Endpoint {
         existing.status = 'accepted';
         await Friendship.db.updateRow(session, existing);
       }
+      liveHub.notify([target.userId, profile.userId], 'friends');
       return list(session);
     }
     await Friendship.db.insertRow(
       session,
       Friendship(requesterId: profile.userId, addresseeId: target.userId, status: 'pending'),
     );
+    liveHub.notify([target.userId], 'friends');
     return list(session);
   }
 
@@ -103,6 +106,7 @@ class FriendsEndpoint extends Endpoint {
     if (f == null) throw GameException(message: 'There is no request from that player.');
     f.status = 'accepted';
     await Friendship.db.updateRow(session, f);
+    liveHub.notify([userId], 'friends');
     return list(session);
   }
 
@@ -111,6 +115,7 @@ class FriendsEndpoint extends Endpoint {
     final me = requireUserId(session);
     final f = await _between(session, me, userId);
     if (f != null) await Friendship.db.deleteRow(session, f);
+    liveHub.notify([userId], 'friends');
     return list(session);
   }
 
@@ -170,6 +175,7 @@ class FriendsEndpoint extends Endpoint {
         LobbyInvite(lobbyId: lobbyId, fromUserId: profile.userId, toUserId: userId),
       );
     }
+    liveHub.notify([userId], 'friends');
   }
 
   Future<FriendsView> dismissInvite(Session session, UuidValue lobbyId) async {

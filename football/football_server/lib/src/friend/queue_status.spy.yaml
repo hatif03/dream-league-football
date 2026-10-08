@@ -1,0 +1,9 @@
+class: QueueStatus
+fields:
+  searching: bool
+  waitedSecs: int
+  mode: String
+  ### How many other players are waiting for the same kind of game.
+  queued: int
+  ### Set when an opponent was found.
+  lobby: LobbyView?

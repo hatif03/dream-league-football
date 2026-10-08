@@ -12,3 +12,4 @@ fields:
   ### Solo World Cups won.
   titles: int
   points: int
+  rating: int

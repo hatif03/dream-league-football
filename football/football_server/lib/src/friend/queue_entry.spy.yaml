@@ -1,0 +1,21 @@
+### A player waiting for matchmaking to find an opponent.
+class: QueueEntry
+table: queue_entry
+fields:
+  id: UuidValue?, defaultPersist=random_v7
+  userId: String
+  ### match | penalties
+  mode: String
+  clientVersion: String
+  rating: int
+  joinedAt: DateTime, defaultModel=now
+  ### Updated while the player's page keeps asking; a silent entry is dropped.
+  lastPollAt: DateTime
+  ### Set when an opponent was found: the room both were seated in.
+  lobbyId: UuidValue?
+indexes:
+  queue_entry_user_idx:
+    fields: userId
+    unique: true
+  queue_entry_mode_idx:
+    fields: mode, joinedAt

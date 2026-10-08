@@ -5,6 +5,8 @@ import 'package:serverpod_auth_idp_server/providers/email.dart';
 import 'package:serverpod_cloud_storage/serverpod_cloud_storage.dart';
 
 import 'src/friend/relay_route.dart';
+import 'src/live/live_route.dart';
+import 'src/social/share_route.dart';
 import 'src/generated/serverpod.dart';
 
 /// The starting point of the Serverpod server.
@@ -52,6 +54,10 @@ void run(List<String> args) async {
   // Fallback transport for friend matches that cannot connect peer to peer.
   pod.webServer.addRoute(RelayRoute(pod.authenticationHandler!));
 
+  // Live push socket (friends, rooms, chat, duels, queue) and shareable result pages with Open Graph previews.
+  pod.webServer.addRoute(LiveRoute(pod.authenticationHandler!));
+  pod.webServer.addRoute(ShareRoute());
+
   // The React app (built by `npm run build:web`) is served from the same host as
   // the relay, so a deployed page needs no CORS or cookie setup for the web side.
   final spa = Directory('web/spa');
@@ -59,6 +65,8 @@ void run(List<String> args) async {
     pod.webServer.addRoute(SpaRoute(spa, fallback: File('web/spa/index.html')));
   }
 
-  // Start the server.
+  // Start the server, then (re)schedule the nightly clean-up as a recurring, database-backed future call.
   await pod.start();
+  await pod.futureCalls.cancel('nightly-maintenance');
+  await pod.futureCalls.callRecurring(identifier: 'nightly-maintenance').cron('0 3 * * *').maintenance.nightly();
 }

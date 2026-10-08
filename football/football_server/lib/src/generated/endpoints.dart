@@ -10,6 +10,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:football_server/src/generated/future_calls.dart' as _izp15ec7;
 import 'package:serverpod/serverpod.dart' as _is;
 import 'package:serverpod_auth_core_server/serverpod_auth_core_server.dart'
     as _iacs;
@@ -20,12 +21,17 @@ import '../auth/email_idp_endpoint.dart' as _iuc1hd5t;
 import '../auth/jwt_refresh_endpoint.dart' as _inwq3ztq;
 import '../friend/friend_match_endpoint.dart' as _i3eu9671;
 import '../friend/lobby_endpoint.dart' as _ixxnzf3o;
+import '../friend/penalty_endpoint.dart' as _i2q597jq;
+import '../matchmaking/matchmaking_endpoint.dart' as _it6jfstx;
 import '../profile/profile_endpoint.dart' as _i6ky944g;
+import '../rankings/challenges_endpoint.dart' as _ihpq2kos;
 import '../rankings/rankings_endpoint.dart' as _id0yvzws;
 import '../social/chat_endpoint.dart' as _ib6swwnz;
 import '../social/friends_endpoint.dart' as _iejqgreb;
 import '../social/report_endpoint.dart' as _i5mkv7jo;
+import '../social/share_endpoint.dart' as _ijy15lza;
 import '../tournament/tournament_endpoint.dart' as _i6ilfrpl;
+export 'future_calls.dart' show ServerpodFutureCallsGetter;
 
 class Endpoints extends _is.EndpointDispatch {
   @override
@@ -67,10 +73,28 @@ class Endpoints extends _is.EndpointDispatch {
           'lobby',
           null,
         ),
+      'penalty': _i2q597jq.PenaltyEndpoint()
+        ..initialize(
+          server,
+          'penalty',
+          null,
+        ),
+      'matchmaking': _it6jfstx.MatchmakingEndpoint()
+        ..initialize(
+          server,
+          'matchmaking',
+          null,
+        ),
       'profile': _i6ky944g.ProfileEndpoint()
         ..initialize(
           server,
           'profile',
+          null,
+        ),
+      'challenges': _ihpq2kos.ChallengesEndpoint()
+        ..initialize(
+          server,
+          'challenges',
           null,
         ),
       'rankings': _id0yvzws.RankingsEndpoint()
@@ -95,6 +119,12 @@ class Endpoints extends _is.EndpointDispatch {
         ..initialize(
           server,
           'report',
+          null,
+        ),
+      'share': _ijy15lza.ShareEndpoint()
+        ..initialize(
+          server,
+          'share',
           null,
         ),
       'tournament': _i6ilfrpl.TournamentEndpoint()
@@ -638,6 +668,11 @@ class Endpoints extends _is.EndpointDispatch {
               type: _is.getType<String>(),
               nullable: false,
             ),
+            'mode': _is.ParameterDescription(
+              name: 'mode',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -646,6 +681,7 @@ class Endpoints extends _is.EndpointDispatch {
               ) async => (endpoints['lobby'] as _ixxnzf3o.LobbyEndpoint).create(
                 session,
                 params['clientVersion'],
+                params['mode'],
               ),
         ),
         'join': _is.MethodConnector(
@@ -782,6 +818,116 @@ class Endpoints extends _is.EndpointDispatch {
                     params['lobbyId'],
                     params['clientVersion'],
                   ),
+        ),
+      },
+    );
+    connectors['penalty'] = _is.EndpointConnector(
+      name: 'penalty',
+      endpoint: endpoints['penalty']!,
+      methodConnectors: {
+        'state': _is.MethodConnector(
+          name: 'state',
+          params: {
+            'matchId': _is.ParameterDescription(
+              name: 'matchId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['penalty'] as _i2q597jq.PenaltyEndpoint).state(
+                    session,
+                    params['matchId'],
+                  ),
+        ),
+        'submit': _is.MethodConnector(
+          name: 'submit',
+          params: {
+            'matchId': _is.ParameterDescription(
+              name: 'matchId',
+              type: _is.getType<_is.UuidValue>(),
+              nullable: false,
+            ),
+            'seq': _is.ParameterDescription(
+              name: 'seq',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+            'zone': _is.ParameterDescription(
+              name: 'zone',
+              type: _is.getType<int>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['penalty'] as _i2q597jq.PenaltyEndpoint).submit(
+                    session,
+                    params['matchId'],
+                    params['seq'],
+                    params['zone'],
+                  ),
+        ),
+      },
+    );
+    connectors['matchmaking'] = _is.EndpointConnector(
+      name: 'matchmaking',
+      endpoint: endpoints['matchmaking']!,
+      methodConnectors: {
+        'join': _is.MethodConnector(
+          name: 'join',
+          params: {
+            'mode': _is.ParameterDescription(
+              name: 'mode',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'clientVersion': _is.ParameterDescription(
+              name: 'clientVersion',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['matchmaking'] as _it6jfstx.MatchmakingEndpoint)
+                      .join(
+                        session,
+                        params['mode'],
+                        params['clientVersion'],
+                      ),
+        ),
+        'status': _is.MethodConnector(
+          name: 'status',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['matchmaking'] as _it6jfstx.MatchmakingEndpoint)
+                      .status(session),
+        ),
+        'cancel': _is.MethodConnector(
+          name: 'cancel',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['matchmaking'] as _it6jfstx.MatchmakingEndpoint)
+                      .cancel(session),
         ),
       },
     );
@@ -948,6 +1094,23 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
+    connectors['challenges'] = _is.EndpointConnector(
+      name: 'challenges',
+      endpoint: endpoints['challenges']!,
+      methodConnectors: {
+        'today': _is.MethodConnector(
+          name: 'today',
+          params: {},
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['challenges'] as _ihpq2kos.ChallengesEndpoint)
+                      .today(session),
+        ),
+      },
+    );
     connectors['rankings'] = _is.EndpointConnector(
       name: 'rankings',
       endpoint: endpoints['rankings']!,
@@ -960,6 +1123,11 @@ class Endpoints extends _is.EndpointDispatch {
               type: _is.getType<int>(),
               nullable: false,
             ),
+            'by': _is.ParameterDescription(
+              name: 'by',
+              type: _is.getType<String?>(),
+              nullable: true,
+            ),
           },
           call:
               (
@@ -969,6 +1137,7 @@ class Endpoints extends _is.EndpointDispatch {
                   .leaderboard(
                     session,
                     params['limit'],
+                    params['by'],
                   ),
         ),
         'achievements': _is.MethodConnector(
@@ -1223,6 +1392,43 @@ class Endpoints extends _is.EndpointDispatch {
         ),
       },
     );
+    connectors['share'] = _is.EndpointConnector(
+      name: 'share',
+      endpoint: endpoints['share']!,
+      methodConnectors: {
+        'createResult': _is.MethodConnector(
+          name: 'createResult',
+          params: {
+            'pngBase64': _is.ParameterDescription(
+              name: 'pngBase64',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'title': _is.ParameterDescription(
+              name: 'title',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+            'description': _is.ParameterDescription(
+              name: 'description',
+              type: _is.getType<String>(),
+              nullable: false,
+            ),
+          },
+          call:
+              (
+                _is.Session session,
+                Map<String, dynamic> params,
+              ) async =>
+                  (endpoints['share'] as _ijy15lza.ShareEndpoint).createResult(
+                    session,
+                    params['pngBase64'],
+                    params['title'],
+                    params['description'],
+                  ),
+        ),
+      },
+    );
     connectors['tournament'] = _is.EndpointConnector(
       name: 'tournament',
       endpoint: endpoints['tournament']!,
@@ -1337,5 +1543,10 @@ class Endpoints extends _is.EndpointDispatch {
       ..initializeEndpoints(server);
     modules['serverpod_auth_core'] = _iacs.Endpoints()
       ..initializeEndpoints(server);
+  }
+
+  @override
+  _is.FutureCallDispatch? get futureCalls {
+    return _izp15ec7.FutureCalls();
   }
 }

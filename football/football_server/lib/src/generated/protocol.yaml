@@ -33,6 +33,13 @@ lobby:
   - setReady:
   - leave:
   - rematch:
+penalty:
+  - state:
+  - submit:
+matchmaking:
+  - join:
+  - status:
+  - cancel:
 profile:
   - me:
   - isNameAvailable:
@@ -43,6 +50,8 @@ profile:
   - saveClub:
   - record:
   - deleteAccount:
+challenges:
+  - today:
 rankings:
   - leaderboard:
   - achievements:
@@ -60,6 +69,8 @@ friends:
   - dismissInvite:
 report:
   - create:
+share:
+  - createResult:
 tournament:
   - current:
   - start:

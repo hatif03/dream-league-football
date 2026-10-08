@@ -2,7 +2,9 @@ import 'package:serverpod/serverpod.dart';
 
 import '../auth/current_user.dart';
 import '../generated/protocol.dart';
+import '../live/live_hub.dart';
 import '../rankings/rankings_endpoint.dart' show invalidateLeaderboard;
+import '../ratings/rating_service.dart';
 import '../util/rate_limit.dart';
 import 'claims.dart';
 
@@ -104,6 +106,7 @@ class FriendMatchEndpoint extends Endpoint {
     // Both players sign within milliseconds of each other; the row lock makes
     // sure neither write drops the other's claim.
     final m = await _update(session, matchId, userId, (m) {
+      if (m.mode == 'penalties') throw GameException(message: 'A penalty duel is settled by the server.');
       final isHost = m.hostUserId == userId;
       final leaver = reason == 'abandoned' ? (isHost ? 'guest' : 'host') : '';
       final text = Claim(hostGoals, guestGoals, reason, leaver).text;
@@ -163,17 +166,22 @@ class FriendMatchEndpoint extends Endpoint {
     UuidValue id,
     String userId,
     void Function(FriendMatch m) change,
-  ) {
-    return session.db.transaction((tx) async {
+  ) async {
+    final saved = await session.db.transaction((tx) async {
       final m = _checkMine(
         await FriendMatch.db.findById(session, id, transaction: tx, lockMode: LockMode.forUpdate),
         userId,
       );
+      final wasLive = m.status == 'live';
       change(m);
       _settle(m);
+      // Rating points are awarded once, in the same transaction that finishes the match.
+      if (wasLive && m.status == 'finished') await applyRatings(session, m, tx);
       if (m.status == 'finished') invalidateLeaderboard();
       return FriendMatch.db.updateRow(session, m, transaction: tx);
     });
+    liveHub.notify([saved.hostUserId, saved.guestUserId], 'match', id.toString());
+    return saved;
   }
 
   MatchState _state(FriendMatch m) => MatchState(
@@ -220,6 +228,7 @@ class FriendMatchEndpoint extends Endpoint {
       hostName: await _name(session, m.hostUserId),
       guestName: await _name(session, m.guestUserId),
       youAreHost: m.hostUserId == userId,
+      ratingDelta: m.hostUserId == userId ? m.hostRatingDelta : m.guestRatingDelta,
     );
   }
 }

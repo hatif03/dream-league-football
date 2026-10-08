@@ -13,16 +13,25 @@
 // ignore_for_file: no_leading_underscores_for_library_prefixes
 import 'dart:async' as _ida;
 import 'dart:io' as _idi;
+import 'package:football_server/src/generated/friend/duel_view.dart'
+    as _ivsucict;
+import 'package:football_server/src/generated/friend/kick_due.dart'
+    as _i3buyhev;
 import 'package:football_server/src/generated/friend/lobby_view.dart'
     as _i9itsngl;
 import 'package:football_server/src/generated/friend/match_view.dart'
     as _ie6yuv0z;
+import 'package:football_server/src/generated/friend/queue_status.dart'
+    as _i5jzga54;
 import 'package:football_server/src/generated/friend/signal_view.dart'
     as _ixpqk0jv;
+import 'package:football_server/src/generated/future_calls.dart' as _izp15ec7;
 import 'package:football_server/src/generated/profile/user_profile.dart'
     as _ihqiwhx7;
 import 'package:football_server/src/generated/rankings/achievement_view.dart'
     as _iyyv6ovn;
+import 'package:football_server/src/generated/rankings/challenge_view.dart'
+    as _iqm4yxu9;
 import 'package:football_server/src/generated/rankings/leaderboard_view.dart'
     as _iv51xp6p;
 import 'package:football_server/src/generated/social/admin_stats.dart'
@@ -35,6 +44,8 @@ import 'package:football_server/src/generated/social/live_status.dart'
     as _ixfz88h7;
 import 'package:football_server/src/generated/social/record_view.dart'
     as _iy62b1ym;
+import 'package:football_server/src/generated/social/share_link.dart'
+    as _ivdqyi1v;
 import 'package:football_server/src/generated/tournament/tournament_view.dart'
     as _i5q7ulwp;
 import 'package:serverpod/serverpod.dart' as _is;
@@ -174,6 +185,8 @@ void withServerpod(
 }
 
 class TestEndpoints {
+  late final futureCalls = _FutureCalls();
+
   late final _LiveOpsEndpoint liveOps;
 
   late final _AdminEndpoint admin;
@@ -186,7 +199,13 @@ class TestEndpoints {
 
   late final _LobbyEndpoint lobby;
 
+  late final _PenaltyEndpoint penalty;
+
+  late final _MatchmakingEndpoint matchmaking;
+
   late final _ProfileEndpoint profile;
+
+  late final _ChallengesEndpoint challenges;
 
   late final _RankingsEndpoint rankings;
 
@@ -195,6 +214,8 @@ class TestEndpoints {
   late final _FriendsEndpoint friends;
 
   late final _ReportEndpoint report;
+
+  late final _ShareEndpoint share;
 
   late final _TournamentEndpoint tournament;
 }
@@ -230,7 +251,19 @@ class _InternalTestEndpoints extends TestEndpoints
       endpoints,
       serializationManager,
     );
+    penalty = _PenaltyEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    matchmaking = _MatchmakingEndpoint(
+      endpoints,
+      serializationManager,
+    );
     profile = _ProfileEndpoint(
+      endpoints,
+      serializationManager,
+    );
+    challenges = _ChallengesEndpoint(
       endpoints,
       serializationManager,
     );
@@ -250,11 +283,21 @@ class _InternalTestEndpoints extends TestEndpoints
       endpoints,
       serializationManager,
     );
+    share = _ShareEndpoint(
+      endpoints,
+      serializationManager,
+    );
     tournament = _TournamentEndpoint(
       endpoints,
       serializationManager,
     );
   }
+}
+
+class _FutureCalls {
+  late final duel = _DuelFutureCall();
+
+  late final maintenance = _MaintenanceFutureCall();
 }
 
 class _LiveOpsEndpoint {
@@ -1056,6 +1099,7 @@ class _LobbyEndpoint {
   _ida.Future<_i9itsngl.LobbyView> create(
     _ist.TestSessionBuilder sessionBuilder,
     String clientVersion,
+    String? mode,
   ) async {
     return _ist.callAwaitableFunctionAndHandleExceptions(() async {
       var _localUniqueSession =
@@ -1068,7 +1112,10 @@ class _LobbyEndpoint {
           createSessionCallback: (_) => _localUniqueSession,
           endpointPath: 'lobby',
           methodName: 'create',
-          parameters: _ist.testObjectToJson({'clientVersion': clientVersion}),
+          parameters: _ist.testObjectToJson({
+            'clientVersion': clientVersion,
+            'mode': mode,
+          }),
           serializationManager: _serializationManager,
         );
         var _localReturnValue =
@@ -1279,6 +1326,189 @@ class _LobbyEndpoint {
                   _localCallContext.arguments,
                 )
                 as _ida.Future<_i9itsngl.LobbyView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _PenaltyEndpoint {
+  _PenaltyEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_ivsucict.DuelView> state(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue matchId,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'penalty',
+            method: 'state',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'penalty',
+          methodName: 'state',
+          parameters: _ist.testObjectToJson({'matchId': matchId}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ivsucict.DuelView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_ivsucict.DuelView> submit(
+    _ist.TestSessionBuilder sessionBuilder,
+    _is.UuidValue matchId,
+    int seq,
+    int zone,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'penalty',
+            method: 'submit',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'penalty',
+          methodName: 'submit',
+          parameters: _ist.testObjectToJson({
+            'matchId': matchId,
+            'seq': seq,
+            'zone': zone,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ivsucict.DuelView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
+class _MatchmakingEndpoint {
+  _MatchmakingEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_i5jzga54.QueueStatus> join(
+    _ist.TestSessionBuilder sessionBuilder,
+    String mode,
+    String clientVersion,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'matchmaking',
+            method: 'join',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'matchmaking',
+          methodName: 'join',
+          parameters: _ist.testObjectToJson({
+            'mode': mode,
+            'clientVersion': clientVersion,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i5jzga54.QueueStatus>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<_i5jzga54.QueueStatus> status(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'matchmaking',
+            method: 'status',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'matchmaking',
+          methodName: 'status',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_i5jzga54.QueueStatus>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+
+  _ida.Future<void> cancel(_ist.TestSessionBuilder sessionBuilder) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'matchmaking',
+            method: 'cancel',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'matchmaking',
+          methodName: 'cancel',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<void>);
         return _localReturnValue;
       } finally {
         await _localUniqueSession.close();
@@ -1582,6 +1812,47 @@ class _ProfileEndpoint {
   }
 }
 
+class _ChallengesEndpoint {
+  _ChallengesEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_iqm4yxu9.ChallengeView> today(
+    _ist.TestSessionBuilder sessionBuilder,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'challenges',
+            method: 'today',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'challenges',
+          methodName: 'today',
+          parameters: _ist.testObjectToJson({}),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_iqm4yxu9.ChallengeView>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
 class _RankingsEndpoint {
   _RankingsEndpoint(
     this._endpointDispatch,
@@ -1595,6 +1866,7 @@ class _RankingsEndpoint {
   _ida.Future<_iv51xp6p.LeaderboardView> leaderboard(
     _ist.TestSessionBuilder sessionBuilder,
     int limit,
+    String? by,
   ) async {
     return _ist.callAwaitableFunctionAndHandleExceptions(() async {
       var _localUniqueSession =
@@ -1607,7 +1879,10 @@ class _RankingsEndpoint {
           createSessionCallback: (_) => _localUniqueSession,
           endpointPath: 'rankings',
           methodName: 'leaderboard',
-          parameters: _ist.testObjectToJson({'limit': limit}),
+          parameters: _ist.testObjectToJson({
+            'limit': limit,
+            'by': by,
+          }),
           serializationManager: _serializationManager,
         );
         var _localReturnValue =
@@ -2041,6 +2316,54 @@ class _ReportEndpoint {
   }
 }
 
+class _ShareEndpoint {
+  _ShareEndpoint(
+    this._endpointDispatch,
+    this._serializationManager,
+  );
+
+  final _is.EndpointDispatch _endpointDispatch;
+
+  final _is.SerializationManager _serializationManager;
+
+  _ida.Future<_ivdqyi1v.ShareLink> createResult(
+    _ist.TestSessionBuilder sessionBuilder,
+    String pngBase64,
+    String title,
+    String description,
+  ) async {
+    return _ist.callAwaitableFunctionAndHandleExceptions(() async {
+      var _localUniqueSession =
+          (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild(
+            endpoint: 'share',
+            method: 'createResult',
+          );
+      try {
+        var _localCallContext = await _endpointDispatch.getMethodCallContext(
+          createSessionCallback: (_) => _localUniqueSession,
+          endpointPath: 'share',
+          methodName: 'createResult',
+          parameters: _ist.testObjectToJson({
+            'pngBase64': pngBase64,
+            'title': title,
+            'description': description,
+          }),
+          serializationManager: _serializationManager,
+        );
+        var _localReturnValue =
+            await (_localCallContext.method.call(
+                  _localUniqueSession,
+                  _localCallContext.arguments,
+                )
+                as _ida.Future<_ivdqyi1v.ShareLink>);
+        return _localReturnValue;
+      } finally {
+        await _localUniqueSession.close();
+      }
+    });
+  }
+}
+
 class _TournamentEndpoint {
   _TournamentEndpoint(
     this._endpointDispatch,
@@ -2185,5 +2508,38 @@ class _TournamentEndpoint {
         await _localUniqueSession.close();
       }
     });
+  }
+}
+
+class _DuelFutureCall {
+  Future<void> kickTimeout(
+    _ist.TestSessionBuilder sessionBuilder,
+    _i3buyhev.KickDue? data,
+  ) async {
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _izp15ec7.DuelKickTimeoutFutureCall().invoke(
+        _localUniqueSession,
+        data,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
+  }
+}
+
+class _MaintenanceFutureCall {
+  Future<void> nightly(_ist.TestSessionBuilder sessionBuilder) async {
+    var _localUniqueSession =
+        (sessionBuilder as _ist.InternalTestSessionBuilder).internalBuild();
+    try {
+      await _izp15ec7.MaintenanceNightlyFutureCall().invoke(
+        _localUniqueSession,
+        null,
+      );
+    } finally {
+      await _localUniqueSession.close();
+    }
   }
 }

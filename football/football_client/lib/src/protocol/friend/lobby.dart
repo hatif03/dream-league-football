@@ -24,13 +24,15 @@ abstract class Lobby
     this.guestNation,
     required this.hostReady,
     required this.guestReady,
+    String? mode,
     required this.status,
     required this.clientVersion,
     this.matchId,
     this.rematchLobbyId,
     DateTime? createdAt,
     required this.updatedAt,
-  }) : createdAt = createdAt ?? DateTime.now();
+  }) : mode = mode ?? 'match',
+       createdAt = createdAt ?? DateTime.now();
 
   factory Lobby({
     _isc.UuidValue? id,
@@ -41,6 +43,7 @@ abstract class Lobby
     String? guestNation,
     required bool hostReady,
     required bool guestReady,
+    String? mode,
     required String status,
     required String clientVersion,
     _isc.UuidValue? matchId,
@@ -65,6 +68,7 @@ abstract class Lobby
       guestReady: _isc.BoolJsonExtension.fromJson(
         jsonSerialization['guestReady'],
       ),
+      mode: jsonSerialization['mode'] as String?,
       status: jsonSerialization['status'] as String,
       clientVersion: jsonSerialization['clientVersion'] as String,
       matchId: jsonSerialization['matchId'] == null
@@ -104,6 +108,9 @@ abstract class Lobby
 
   bool guestReady;
 
+  /// match (a full 11 v 11) | penalties (a server-refereed penalty duel)
+  String mode;
+
   /// open | live | closed
   String status;
 
@@ -132,6 +139,7 @@ abstract class Lobby
     String? guestNation,
     bool? hostReady,
     bool? guestReady,
+    String? mode,
     String? status,
     String? clientVersion,
     _isc.UuidValue? matchId,
@@ -151,6 +159,7 @@ abstract class Lobby
       if (guestNation != null) 'guestNation': guestNation,
       'hostReady': hostReady,
       'guestReady': guestReady,
+      'mode': mode,
       'status': status,
       'clientVersion': clientVersion,
       if (matchId != null) 'matchId': matchId?.toJson(),
@@ -172,6 +181,7 @@ abstract class Lobby
       if (guestNation != null) 'guestNation': guestNation,
       'hostReady': hostReady,
       'guestReady': guestReady,
+      'mode': mode,
       'status': status,
       'clientVersion': clientVersion,
       if (matchId != null) 'matchId': matchId?.toJson(),
@@ -199,6 +209,7 @@ class _LobbyImpl extends Lobby {
     String? guestNation,
     required bool hostReady,
     required bool guestReady,
+    String? mode,
     required String status,
     required String clientVersion,
     _isc.UuidValue? matchId,
@@ -214,6 +225,7 @@ class _LobbyImpl extends Lobby {
          guestNation: guestNation,
          hostReady: hostReady,
          guestReady: guestReady,
+         mode: mode,
          status: status,
          clientVersion: clientVersion,
          matchId: matchId,
@@ -235,6 +247,7 @@ class _LobbyImpl extends Lobby {
     Object? guestNation = _Undefined,
     bool? hostReady,
     bool? guestReady,
+    String? mode,
     String? status,
     String? clientVersion,
     Object? matchId = _Undefined,
@@ -251,6 +264,7 @@ class _LobbyImpl extends Lobby {
       guestNation: guestNation is String? ? guestNation : this.guestNation,
       hostReady: hostReady ?? this.hostReady,
       guestReady: guestReady ?? this.guestReady,
+      mode: mode ?? this.mode,
       status: status ?? this.status,
       clientVersion: clientVersion ?? this.clientVersion,
       matchId: matchId is _isc.UuidValue? ? matchId : this.matchId,

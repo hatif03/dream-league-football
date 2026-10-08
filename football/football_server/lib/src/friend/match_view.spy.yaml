@@ -5,3 +5,5 @@ fields:
   hostName: String
   guestName: String
   youAreHost: bool
+  ### The caller's rating change for this match, once it has finished.
+  ratingDelta: int?
