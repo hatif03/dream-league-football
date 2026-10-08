@@ -1,6 +1,17 @@
 # Online matches
 
-How two people play one match against each other in Dream League Football, and the part Serverpod plays in it.
+How two people play against each other in Dream League Football, and the part Serverpod plays in it. There are two kinds of online game, and they are built differently on purpose:
+
+| | **11 v 11 match** | **Penalty duel** |
+| --- | --- | --- |
+| Who runs the game | The host's browser (host-authoritative) | **The Serverpod server (referee)** |
+| Result | Both players sign the score | The server decides; nothing to sign |
+| Can a player cheat? | A host could try; two signatures and plausibility checks catch it | No: a request is a number from 0 to 5 |
+| Latency matters | Yes (see below) | No: turn-based, 25 s per kick |
+| Found by | Room code, link, invite, **or matchmaking** | Room code, link, invite, **or matchmaking** |
+| Changes your rating | Yes (K = 24) | Yes (K = 16) |
+
+Sections: [the match](#the-idea-in-one-paragraph) · [finding an opponent](#finding-an-opponent-matchmaking) · [the penalty duel](#the-penalty-duel) · [live updates](#live-updates) · [ratings](#ratings).
 
 ## The idea in one paragraph
 
@@ -23,11 +34,11 @@ The match is **simulated in one player's browser** (the *host*) and **drawn in t
 
 - A 22-player simulation with physics, AI and rules is cheap in a browser and expensive as a server process per room. Peer-to-peer costs the server almost nothing.
 - Latency is lower: the host plays with zero delay, the guest sees the host's world about 110 ms behind plus the network.
-- The cost is trust: the host could cheat. The design answers that with **two-signature results** and a **plausibility check** (below), and the stakes are deliberately low (there is no ranked ladder).
+- The cost is trust: the host could cheat. The design answers that with **two-signature results** and a **plausibility check** (below), and the stakes are kept modest: a rating moves only for a finished match both players signed, at most five rated matches count per pair per day, and abandoned or void matches count for nobody.
 
 ## Lifecycle of a friend match
 
-1. **Room.** `lobby/create` (host) → a 5-character code. The guest joins by code, link (`/online?join=CODE`), QR code or an invite from `friends/invite`. Both players pick different nations and press ready; when both are ready the server creates the `FriendMatch` row and returns its id. Everyone sees joins, leaves, nation picks and readiness through a one-second poll of `lobby/get`, with toasts. The build id must match (the lobby stores `clientVersion`).
+1. **Room.** `lobby/create` (host) → a 5-character code. The guest joins by code, link (`/online?join=CODE`), QR code or an invite from `friends/invite`. Both players pick different nations and press ready; when both are ready the server creates the `FriendMatch` row and returns its id. Everyone sees joins, leaves, nation picks and readiness (the server pushes a `lobby` event over the [live socket](#live-updates); a slow poll of `lobby/get` is the fallback), with toasts. The build id must match (the lobby stores `clientVersion`).
 2. **Count-in.** A 3-2-1 count-in starts both browsers at about the same time.
 3. **Handshake** (`friendMatch/postOffer`, `postAnswer`, `getSignal`). The host creates an `RTCPeerConnection` with two Google STUN servers and a data channel, **waits for ICE gathering to finish** (capped at 2.5 s) and posts one offer that already contains every candidate ("non-trickle ICE"). The guest polls `getSignal` (every 250 ms), answers the same way, and the host polls for the answer. Two small posts instead of a stream of candidates keeps the signalling to Serverpod trivial. The offer and answer live on the `friend_match` row.
 4. **Transport.** If the channel is not open within 12 s the pair switches to the **relay**: each connects a WebSocket to `/relay/<matchId>`, authenticates with its JWT in the first frame, and the server forwards frames between them. `friendMatch/connected(transport)` records which transport was used. A setting (`localStorage` `wc2026.forceRelay=1`) forces the relay for testing.
@@ -72,7 +83,7 @@ Each player posts `friendMatch/claim` with the score as they saw it: the canonic
 | One only, after 45 s: full time | `void` (`timeout`): a single signature is never enough |
 | None after 4 hours | `void` (`timeout`) |
 
-Writes happen in a transaction with a row lock, so two near-simultaneous claims can never overwrite each other (see [SERVERPOD.md §6](SERVERPOD.md#6-concurrency-transactions-and-row-locks)). The rules are unit-tested in `football_server/test/claims_test.dart`.
+Writes happen in a transaction with a row lock, so two near-simultaneous claims can never overwrite each other (see [SERVERPOD.md §7](SERVERPOD.md#7-concurrency-transactions-and-row-locks)). The rules are unit-tested in `football_server/test/claims_test.dart`.
 
 **Plausibility check.** The guest watches the host's stream: a player moving faster than 700 px/s (a sprint is about 250), or repeated impossible jumps, count as anomalies. After three, the guest **refuses to sign** the result and the match is not recorded. Reports (`report/create`) carry the match id for review.
 
@@ -90,6 +101,37 @@ An abandoned or void match counts for nobody in the profile record; the "abandon
 
 Presence (the green dot, invite toasts) uses `UserProfile.lastSeenAt`, refreshed by the friends poll (see [API.md](API.md#friends)).
 
+## Finding an opponent: matchmaking
+
+No friend online? `matchmaking/join(mode, clientVersion)` puts the player in a queue for a 11 v 11 match or a penalty duel. The server pairs two waiting players when they play the same mode on the same build, neither has blocked the other, and their ratings are within `100 + 15 × secondsWaited` points (the window widens the longer both wait). It then creates a **ready** room with nations chosen for them (their favourite nation if set, otherwise random, never the same), starts the match and pushes a `queue` event. The player who waited longer hosts.
+
+The app shows "Searching… 12s" with how many others are waiting, can be cancelled, and resumes after a reload (`matchmaking/status` is also the keep-alive: a player who stops asking for 20 s stops being matched). Both players land straight in the game: the 11 v 11 handshake above, or the duel below.
+
+## The penalty duel
+
+A duel is five penalties each, then sudden death, **refereed by Serverpod** (`penalty/state`, `penalty/submit`). The goal is six zones (top/bottom × left/centre/right). On each kick both players choose a zone in secret: the shooter where to shoot, the keeper where to dive. When both have chosen, or after 25 seconds (whoever did not choose gets a random zone), the server draws the result with its own `Random.secure()`.
+
+```
+  shooter ── submit(zone 0-5) ─┐                            ┌─ DuelView (kick shown only once settled)
+                               ├─► Serverpod: lock match row ─► draw: goal / saved / wide / post ─► next kick or finish + Elo
+  keeper  ── submit(zone 0-5) ─┘            ▲                └─ liveHub: "duel" event to both players
+                                            └─ also: lazy check in penalty/state, and a future call at the deadline
+```
+
+- **Hidden information.** `DuelView` carries who shoots and the zones of *settled* kicks only; the open kick shows nothing about the other choice. The first choice for a kick stands, so a retried request cannot change it.
+- **Outcomes.** The top corners go wide 18 % of the time, the bottom corners 7 %, the middle 3–6 %, and any shot can hit the post (4 %); a keeper who dives to the shooter's zone saves it, to the right side but wrong height saves 35 %, to the neighbouring zone at the same height 10 %.
+- **Timeouts.** Every kick schedules a Serverpod **future call** at its deadline, so a duel finishes even if both browsers close. Duels no one has touched for a long time are voided by the nightly job.
+- **Leaving** a duel forfeits it (`friendMatch/leave`): the match ends `abandoned`, no rating changes, the opponent sees "left the duel".
+- **UI.** `src/client/screens/match/DuelStage.tsx`: a goal with six buttons (arrows or D-pad + Enter/A, or tap), a countdown bar, a reveal of each kick (ball and keeper), kick dots for both sides, a result panel with the rating change, rematch and share.
+
+## Live updates
+
+Rooms, chat, friends, duels and the queue used to be polled every one to six seconds. A Serverpod web-server route, `/live`, now pushes "this changed" events instead: the browser opens one WebSocket, authenticates with its JWT, and receives `{"t": "lobby" | "chat" | "friends" | "match" | "duel" | "queue", "id": "…"}` after the server changes something relevant to that player. The app then refetches just that thing. Events carry no game data, so a missed one costs nothing: every screen keeps a slow poll and refetches on reconnect. Details: [SERVERPOD.md §9](SERVERPOD.md#9-live-push-the-live-websocket).
+
+## Ratings
+
+Every player starts at 1000. A finished online match or duel moves ratings by Elo (K = 24 for a match, 16 for a duel, a draw is half a win, a floor of 100): beating a stronger player is worth more. The change is computed inside the transaction that finishes the match, so it is applied exactly once, and shown on the result panel, the profile and the leaderboard (rank by rating or by points). Two friends cannot farm each other: after five finished matches between the same pair in 24 hours, further ones change nothing.
+
 ## Testing the netcode
 
 | Script | What it proves |
@@ -101,4 +143,6 @@ Presence (the green dot, invite toasts) uses `UserProfile.lastSeenAt`, refreshed
 | `e2e-friend.mjs --invite` | Joining through a friend invite toast instead of the link |
 | `scripts/e2e-loopback.mjs` | Host and guest in one page (`/dev/loopback`): fuzzed streams, fouls, penalties, red cards, hidden-tab ticks |
 | `scripts/smoke-friend.mjs`, `smoke-relay.mjs` | HTTP and relay protocol checks, including that strangers are refused |
-| `dart test` | Claim resolution |
+| `scripts/e2e-duel.mjs` | Two real browsers find each other through matchmaking and play a whole penalty duel through the UI: exactly one wins, ratings move, the leaderboard shows it |
+| `scripts/smoke-duel.mjs` | The same over HTTP, plus the `/live` socket (a bad token is refused, a pairing is pushed), the daily challenge and the `/r/<id>` share page |
+| `dart test` | Claim resolution, shootout/Elo/challenge rules, and the `serverpod_test` integration test that plays a duel through the endpoints |

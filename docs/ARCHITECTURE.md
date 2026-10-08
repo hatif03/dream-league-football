@@ -7,11 +7,11 @@ Dream League Football has three parts: a **React web app** that contains the who
 │ React 19 app (Vite, Tailwind v4, React Query)                 │  JSON  │ Endpoints  profile tournament lobby       │
 │  ├─ screens / ui   menus, navigation, dialogs, HUD            │◄──────►│            friendMatch friends chat ...   │
 │  ├─ api/           fetch client + token refresh               │ HTTPS  │ Auth       email IdP + JWT                │
-│  ├─ game/          PitchKickGame engine + canvas renderer     │        │ ORM        12 game tables, migrations     │
-│  └─ net/           WebRTC / relay link for friend matches     │        │ Web server SPA route + /relay WebSocket   │
-└───────────────────────────────▲───────────────────────────────┘        │ Hosted on Serverpod Cloud                 │
-                                │ WebRTC data channel (or relay)          └──────────────────────────────────────────┘
-                                ▼
+│  ├─ game/          PitchKickGame engine + canvas renderer     │        │ ORM        15 game tables, migrations     │
+│  └─ net/           WebRTC / relay link, live socket           │        │ Web server SPA, /relay, /live, /r/<id>    │
+└───────────────────────────────▲───────────────────────────────┘        │ Future calls, cloud storage, Elo, duels   │
+                                │ WebRTC data channel (or relay)          │ Hosted on Serverpod Cloud                 │
+                                ▼                                         └──────────────────────────────────────────┘
                          the other player's browser
 ```
 
@@ -23,11 +23,12 @@ Everything about the server is in [SERVERPOD.md](SERVERPOD.md); the online match
 | --- | --- |
 | `src/client/index.tsx`, `router.tsx` | Entry point and routes (providers: React Query, session, settings, hints, dialogs, notifications) |
 | `src/client/screens/` | One file per routed screen: `HomeScreen`, `AuthScreens` (login, sign-up, reset, welcome), `WorldCupScreen`, `OnlineScreen` (hub and lobby), `PracticeScreen`, `ProfileScreen`, `SettingsScreen`, `LegalScreens`, `MatchScreen` |
-| `src/client/screens/match/` | `LocalMatch` (practice and World Cup), `FriendMatchStage` (online), `shared.tsx` (stage, pause menu, intro card, result panel), `usePause` |
+| `src/client/screens/match/` | `LocalMatch` (practice, friendly, World Cup, shootout), `FriendMatchStage` (online match), `DuelStage` (the server-refereed penalty duel), `shared.tsx` (stage, pause menu, intro card, result panel), `usePause` |
 | `src/client/ui/` | The design system: `AppShell`, `MenuNav` (spatial navigation), `Dialog`, `controls`, `hints`, `Notifications`, `MatchHud`, `SettingsPanels`, `sfx`, `Flag`, `art` |
-| `src/client/api/` | `http.ts` (transport), `session.ts`, `tournament.ts`, `friend.ts`, `social.ts`, `queries.ts` |
+| `src/client/api/` | `http.ts` (transport), `session.ts`, `tournament.ts`, `friend.ts`, `duel.ts` (matchmaking, duel, daily challenge, sharing), `social.ts`, `rankings.ts`, `queries.ts` |
 | `src/client/game/` | The engine and everything it needs (below) |
 | `src/client/net/peerMatch.ts` | The `Link` between two browsers: WebRTC first, relay fallback |
+| `src/client/net/live.ts` | The `/live` push socket: one connection, `useLive(topics, handler)` |
 | `src/client/components/game/` | `TouchControls`, `TeamCrest` (kit jersey), `ShootoutHud` |
 | `football/football_server/` | The Serverpod server |
 | `scripts/` | Test scripts, `export-server-data.mjs`, `build-web.mjs` |
@@ -40,11 +41,11 @@ Everything about the server is in [SERVERPOD.md](SERVERPOD.md); the online match
 
 ### Server state
 
-TanStack Query holds server data (`useRun`, `useRecord`, `useHistory`, the friends poll). `Notifications.tsx` runs the one global friends poll (6 s, 30 s in a hidden tab), shows invite and friend-request toasts, the bell, and keeps the presence heartbeat alive.
+TanStack Query holds server data (`useRun`, `useRecord`, `useHistory`, `useLeaderboard`, `useDailyChallenge`, the friends list). `Notifications.tsx` runs the one global friends refetch (on a `friends` push from the server, plus a 20 s poll that doubles as the presence heartbeat; 6 s if the live socket is down), shows invite and friend-request toasts and the bell. Rooms, chat, the matchmaking queue and duels refetch on pushes from the live socket too, with a slow poll as the safety net.
 
 ### Settings
 
-`ui/settings.tsx` stores key bindings, controller bindings, touch layout, CPU difficulty and sound in `localStorage` (`wc2026.keybindings`, `wc2026.padbindings`, `wc2026.touch`, `wc2026.difficulty`, `wc2026.sound`). The `wc2026.*` prefix is historical and kept so players do not lose their settings or sign-in.
+`ui/settings.tsx` stores key bindings, controller bindings, touch layout, CPU difficulty, match length, goal replays, commentary and sound in `localStorage` (`wc2026.keybindings`, `wc2026.padbindings`, `wc2026.touch`, `wc2026.difficulty`, `wc2026.matchSecs`, `wc2026.replays`, `wc2026.commentary`, `wc2026.sound`) and copies them to the account (`api/settingsSync.ts`). The `wc2026.*` prefix is historical and kept so players do not lose their settings or sign-in.
 
 ## The game engine (`src/client/game/`)
 
@@ -61,7 +62,7 @@ TanStack Query holds server data (`useRun`, `useRecord`, `useHistory`, the frien
 | `ratings.ts` | Turns the six FIFA-style ratings into movement, shot, pass, dribble and tackle multipliers |
 | `keybindings.ts`, `inputDevices.ts`, `useDeviceInput.ts` | Keyboard, controller and touch input; the last device used |
 | `snapshot.ts`, `guestView.ts` | The online wire format and the guest's renderer ([MULTIPLAYER.md](MULTIPLAYER.md)) |
-| `shootout.ts` | `PenaltyShootout`: the knockout shootout game |
+| `shootout.ts` | `PenaltyShootout`: the shootout game (World Cup knockouts, friendlies, and the standalone mode) |
 | `teams/` | The 48 nations (squads, kits, ratings), formations, and the real group draw and fixtures (`schedule.ts`) |
 
 ### How a frame works
@@ -70,7 +71,8 @@ TanStack Query holds server data (`useRun`, `useRecord`, `useHistory`, the frien
 2. Input (keyboard events, pad polling, touch buttons) is turned into **canonical key codes**. Rebinding only changes the mapping from physical key to canonical code, so the game logic never sees custom keys.
 3. `update(dt)` runs the controlled player, the CPU (off-ball positioning, marking, pressing, set pieces), possession, ball physics (with height), the keepers' reactions, rules (out of play, offside, fouls and cards, goals) and the clock.
 4. The engine builds a `Scene` (camera, ball, players with kits, markers) and calls `renderScene`.
-5. A `HudState` is pushed to React (score, clock, message, charge, names, stats) so the HUD is ordinary React, not canvas.
+5. A `HudState` is pushed to React (score, clock, message, charge, names, stats, replay flag, added time) so the HUD is ordinary React, not canvas.
+6. Local matches also get an event stream (`onEvent`: goal, save, shot, foul, card, offside, restarts, half time, added time, full time) that feeds the commentary captions (`ui/Commentary.tsx`) and the synthesised crowd (`ui/crowd.ts`). With replays on, the engine keeps the last four seconds as light frames (copies of the players, at 30 a second) and plays them back after the goal celebration; online matches do not use replays.
 
 The world is **flat 2D** (x = goal to goal, y = touchline to touchline). Only rendering is pseudo-3D: `proj` maps the field onto a tilted TV view with perspective scale, a zoom that crops the pitch like a tele camera, and a camera that follows the ball in both axes.
 
@@ -85,6 +87,8 @@ Each nation is one small file in `game/teams/` with name, formation, kits (home,
 **Playing a World Cup match.** `WorldCupScreen` shows `tournament/current`. "Play match" → `matchContext.start({kind: 'worldcup', ...})` → `MatchScreen` → `LocalMatch` creates `PitchKickGame` with the two teams and `knockout: true` for knockout rounds. At full time (after extra time and, if level, a `PenaltyShootout`) `LocalMatch` calls `tournament/submitResult` with a fresh nonce; the server simulates the rest of the matchday or round and returns the new `TournamentView`, which replaces the cached run.
 
 **Playing a friend.** See [MULTIPLAYER.md](MULTIPLAYER.md).
+
+**Finding a match and a penalty duel.** `QuickMatch` → `matchmaking/join` → the server pairs two players and pushes a `queue` event over `/live` → both clients call `match.start({kind: 'duel'})` → `DuelStage` fetches `penalty/state`, each player taps a zone → `penalty/submit` → the server resolves the kick when both have chosen (or at the deadline, by a future call), pushes a `duel` event, and at the end applies Elo and returns the rating change in the `DuelView`.
 
 ## Build and hosting
 

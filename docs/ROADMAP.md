@@ -1,12 +1,12 @@
 # Football mechanics and experience roadmap
 
-An honest inventory of what the match has, what a football game normally has that this one does not, and what to do about it. It reflects the code as of 4 October 2026.
+An honest inventory of what the match has, what a football game normally has that this one does not, and what to do about it. It reflects the code as of 8 October 2026.
 
 ## What the match already has
 
 | Area | In the game |
 | --- | --- |
-| Match flow | Kick-off, **half-time break** (new), full time, extra time and a penalty shootout in knockouts, a selectable match length (3, 5 or 8 real minutes) |
+| Match flow | Kick-off, half-time break, **added time at 90'**, full time, extra time and a penalty shootout in knockouts (and optionally in friendlies), a selectable match length (3, 5 or 8 real minutes) |
 | Restarts | Throw-ins (by hand), corners, goal kicks, free kicks with a four-man wall, penalties, kick-off after a goal, offside |
 | Discipline | Fouls (human slide tackles, and CPU fouls), yellow and red cards, a sent-off player leaves the pitch |
 | Ball | Real-size pitch, ball height (lofted passes, chips, shots that rise or dip), charged power, accuracy that falls with power |
@@ -15,17 +15,18 @@ An honest inventory of what the match has, what a football game normally has tha
 | Goalkeepers | Positioning, dives, parries, catching only inside the box and not from a back-pass, long clearances |
 | Players | Six ratings that change how each player really plays, kits, real squads for 48 nations |
 | Tactics | **Choice of formation** (4-3-3, 4-2-3-1, 4-4-2, 3-5-2, 3-4-3) before a World Cup match (new) |
-| Competition | Solo World Cup with the real draw and bracket, three CPU difficulties, friend matches |
+| Competition | Solo World Cup with the real draw and bracket, three CPU difficulties, online matches and **penalty duels** with matchmaking, Elo ratings and a daily challenge |
+| Broadcast | **Goal replays**, commentary captions, a synthesised stadium crowd (new) |
 
 ## What is missing, ranked
 
 **Cheap (hours) and worthwhile**
 
-- Added time at the end of each half, and the second half swapping the direction of play.
+- Added time at the end of the first half too, and the second half swapping the direction of play. (Added time at 90' is done.)
 - The advantage rule: let play go on after a foul when the fouled side keeps the ball.
 - A stamina bar for sprinting, so pressing and long runs cost something.
 - Choose the free-kick taker and corner taker; show an aiming arrow and a curve option for free kicks (the free-kick mechanic is functional but basic: it has a wall and a taker, but not much player control).
-- Goal replays and a man-of-the-match line on the full-time screen.
+- A man-of-the-match line on the full-time screen, and replays of saves and near misses (goal replays are done).
 - Penalties for a foul by a defender who denies a clear goal-scoring chance (a red card in the box).
 
 **Medium (days)**
@@ -39,7 +40,7 @@ An honest inventory of what the match has, what a football game normally has tha
 
 **Large (weeks)**
 
-- Replays, VAR, commentary, weather and stadiums.
+- VAR, spoken commentary, weather and stadiums. (Goal replays and commentary captions are done.)
 - Spectating a friend's match.
 - A career or manager mode with a season, transfers and a youth squad.
 
@@ -64,6 +65,20 @@ An honest inventory of what the match has, what a football game normally has tha
 - A **club crest and kit editor**, saved to your account and worn in solo matches and friendlies.
 - **Achievements** (12) and a global **leaderboard**.
 
+**Done in the third round (Serverpod showcase)**
+
+- **FIFA-style controls:** a keyboard layout switch (FIFA classic arrows / EA FC WASD), the EA FC controller layout, pause only on `Esc`/Start.
+- **Penalty shootout mode** (Practice → Penalty shootout), friendlies that can be decided by extra time and penalties, and shootouts that work with controller and touch.
+- **Online penalty duel** refereed by the Serverpod server (secret choices, server randomness, 25-second kicks).
+- **Matchmaking** by rating for matches and duels.
+- **Elo ratings**, an anti-farming cap, a leaderboard by rating or points, two new achievements.
+- **Daily challenge** with a streak.
+- **Live push** over a `/live` WebSocket route, replacing most polling.
+- **Serverpod future calls:** a nightly maintenance cron and a timeout for every penalty kick.
+- **Cloud storage + share links** with Open Graph previews (`/r/<id>`).
+- **Match upgrades:** goal replays, commentary captions, a synthesised crowd, added time.
+- Server **integration tests** with `serverpod_test`.
+
 **Not done: Google or Apple sign-in.** Serverpod supports both, but each needs OAuth credentials created in your own Google Cloud or Apple Developer account (a client ID and secret that you must own and register the app's URLs with). Serverpod Cloud does not provide shared ones, so it was left out as agreed. To add it later: create the credentials, store them with `scloud password set`, and enable the provider in `server.dart` next to the email provider.
 
 **Next, cheap (remaining)**
@@ -77,7 +92,8 @@ An honest inventory of what the match has, what a football game normally has tha
 
 - Seasonal leaderboards and friends-only rankings.
 - Sign-in with Google or Apple (see above: needs your own credentials).
-- Ranked online matches (needs the cheating question below answered first; today two friends can farm wins from each other on the leaderboard).
+- Ranked 11 v 11 matches that cannot be cheated. Today the rating moves for signed 11 v 11 results too, but a modified host could still cheat that kind of match (the penalty duel cannot be cheated: the server referees it); a pair can only earn rating from five matches a day. Fixing this needs a server-side referee or replay verification.
+- Spectating, tournaments between friends, seasonal rating resets.
 
 ## Latency fairness in online matches
 
@@ -90,4 +106,4 @@ What the game does now, only in online matches and only for the host:
 
 What this does **not** fix: the guest still **sees** the match about 110 ms late (that delay is deliberate, it smooths 30 snapshots a second) plus half the round trip, so the guest reacts to a slightly older picture. Closing that gap fully would need prediction and rollback for the guest, which is a large change to the engine; the delay above removes the input half of the advantage without touching the simulation.
 
-Because the host runs the simulation, a modified host can still cheat. The two-signature result and the guest's plausibility check limit what that can achieve (see [MULTIPLAYER.md](MULTIPLAYER.md)); a ranked mode would need a server-side referee.
+Because the host runs the simulation, a modified host can still cheat. The two-signature result and the guest's plausibility check limit what that can achieve (see [MULTIPLAYER.md](MULTIPLAYER.md)); a fully ranked 11 v 11 mode would need a server-side referee. The penalty duel is the first game built that way.

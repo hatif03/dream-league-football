@@ -68,6 +68,14 @@ for how to work on the server. (An outdated template overview that used to close
 - DEPLOY: `npm run build:web` then `scloud deploy --yes --non-interactive` in `football/football_server`
   (PowerShell on Windows). `web/spa` is git-ignored but uploaded (`.scloudignore` opts it back in).
   Operator endpoints need `scloud password set adminUserIds <user-id>[,<id>]`.
+- OCTOBER 2026 ROUND 3 (server showcase; read `docs/SERVERPOD.md` §8-11 first):
+  · PENALTY DUEL = server-refereed (`friend/penalty_*.dart`, endpoint `penalty/state|submit`, table `penalty_kick`). Lobby/FriendMatch have `mode` (`match`|`penalties`). Client: `screens/match/DuelStage.tsx` (MatchConfig kind `duel`). Zones 0-5 = top L/C/R, bottom L/C/R. Rules unit-tested in `football_server/test/duel_rules_test.dart`.
+  · MATCHMAKING `matchmaking/join|status|cancel` (table `queue_entry`), client `screens/online/QuickMatch.tsx`. ELO in `ratings/` (`UserProfile.rating`, deltas on the match row). Leaderboard `by`=rating|points.
+  · LIVE PUSH: server `live/` (route `/live`, `liveHub.notify`), client `net/live.ts` (`useLive(topics, handler)`, `useLiveConnected()`); pushes carry no data, screens refetch and keep a slow poll.
+  · FUTURE CALLS: `future_calls/` (nightly cron + per-kick timeout). SHARE: `share/createResult` + route `/r/<id>` + public cloud storage; `ui/resultCard.ts` shares the link when signed in.
+  · MATCH UPGRADES in the engine: `replaysOn`/`replayBuf`/`replay` (4 s of light frames, played after the goal celebration, local modes only, skipped by any key via `skipReplay`), `onEvent` GameEvents (-> `ui/Commentary.tsx`, `ui/crowd.ts`), added time (`addedMins`, announced once at 90'). Settings `wc2026.replays`, `wc2026.commentary`.
+  · CONTROLS: `KEYBOARD_PRESETS` (classic arrows / EA FC WASD) in `keybindings.ts`; controller default is the EA FC layout (RT sprint, LT jockey); pause is Esc / Start only.
+  · Tests: `scripts/smoke-duel.mjs`, `e2e-duel.mjs`, `e2e-match.mjs`, `dart test` (31). Dev ports can be overridden (see `docs/DEVELOPMENT.md` Port conflicts).
 
 ### Game architecture
 (Everything below describes the engine; where it mentions `HomePage.tsx` or a `phase` state it is historical, see MODES above.)

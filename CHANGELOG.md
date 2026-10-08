@@ -2,6 +2,34 @@
 
 What changed, newest first, grouped by theme. The game itself has been built since 25 September 2026; the Serverpod back end, online play and the new interface came in early October 2026.
 
+## Third round: a bigger Serverpod showcase, FIFA controls (8 October 2026)
+
+**Serverpod**
+
+- **Penalty duel refereed by the server** (`penalty/state`, `penalty/submit`): secret zone choices, server randomness, 25-second kicks, standard shootout rules. New tables `penalty_kick`, columns `mode` on `lobby` and `friend_match`.
+- **Matchmaking** (`matchmaking/join|status|cancel`, table `queue_entry`): a rating window that widens while waiting, same build and mode, blocks respected.
+- **Elo ratings** (`UserProfile.rating`, `hostRatingDelta` / `guestRatingDelta`), applied in the finishing transaction, with an anti-farming cap; leaderboard by rating or points; two new achievements (14 total).
+- **Daily challenge** (`challenges/today`) with a streak, computed from stored matches.
+- **Live push**: a `/live` WebSocket route and an in-memory hub notify players of friends, room, chat, duel and queue changes; polling slowed to a safety net.
+- **Future calls**: `MaintenanceFutureCall.nightly` (cron 03:00 UTC) and `DuelFutureCall.kickTimeout` (one per kick).
+- **Cloud storage + share pages**: `share/createResult` stores the result picture, `/r/<id>` serves an Open Graph preview page. `maxRequestSize` raised to 3 MB.
+- **Tests**: `serverpod_test` integration tests, rule unit tests (31 `dart test` cases in all), `smoke-duel`, `e2e-duel`.
+- Migration `20261008081311877`.
+
+**Game**
+
+- **FIFA-style controls**: a keyboard layout switch (FIFA classic arrows / EA FC WASD / custom), the EA FC controller layout (RT sprint, LT jockey), pause only on Esc/Start.
+- **Penalty shootout mode** (Practice → Penalty shootout) with keyboard, controller and touch; friendlies can be decided by extra time and penalties.
+- **Goal replays**, **commentary captions**, a synthesised **stadium crowd**, and **added time** at 90 minutes (all switchable in Settings).
+- Share links instead of downloads for signed-in players.
+
+**Fixes found while testing**
+
+- A malformed `/r/<id>` link caused a server error instead of opening the app.
+- Sudden death could end after the first kick of a pair (the early-finish check now only applies to the first five rounds).
+- Reading a matchmaking result raced with a live push and could fail with "no rows deleted" (the delete is idempotent now).
+- The score card (about 850 KB) exceeded the first upload limit and Serverpod's default 512 KB request size.
+
 ## Second round of features (4 October 2026)
 
 - **11 v 11 friendly** against the CPU, **interactive tutorial**, **quick chat** in online matches, **install as an app** (manifest, icons, install card), **shareable result cards**.

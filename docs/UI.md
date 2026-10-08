@@ -19,7 +19,7 @@ Defined in `src/client/index.css` as Tailwind v4 theme tokens.
 - **Tiles** (`.tile`, `<Tile>`): a coloured top bar from the team or mode colour; focus scales the tile up with a white outline and cyan glow.
 - **Buttons** (`.btn`, `<Btn>`): skewed parallelograms. Primary = cyan, secondary = glass, danger = red. Each screen has one primary action.
 - **Motion** is short (slide/fade on screen change, tile scale, the count-in) and disabled with `prefers-reduced-motion`.
-- **Sound.** `ui/sfx.ts` synthesises move, select, back, notify, tick and whistle with the Web Audio API (no audio files); a mute switch lives in Settings.
+- **Sound.** `ui/sfx.ts` synthesises move, select, back, notify, tick and whistle with the Web Audio API (no audio files), and `ui/crowd.ts` the stadium crowd; a mute switch lives in Settings.
 - **Flags** come from the `flag-icons` package (the 48 nations used are bundled in `ui/flags.ts`).
 
 ## Avatars
@@ -31,7 +31,9 @@ Players pick one of 24 pre-made footballer avatars (`ui/avatars.tsx`): the piece
 - **Club editor** (`/club`): crest shape, emblem and colours, club name, kit colours with swatches and a free colour picker, and a live preview. Saved with `profile/saveClub`.
 - **Tutorial** (`screens/match/Tutorial.tsx`): a coach card on the pitch that watches counters from the engine (`tutorialProbe`: distance run, sprint time, kicks by type) and advances as you do each thing.
 - **Install** (`ui/install.tsx`, `public/manifest.json`, icons made by `scripts/make-icons.mjs`): an install card in Settings (Chrome and Edge show a button; iPhone shows the Add to Home Screen steps).
-- **Result card** (`ui/resultCard.ts`): the score drawn on a canvas as a 1200×630 image.
+- **Result card** (`ui/resultCard.ts`): the score drawn on a canvas as a 1200×630 image. Signed in, "Share result" uploads it to Serverpod cloud storage and shares the link `/r/<id>` (an Open Graph preview page).
+- **Broadcast layer** (`ui/Commentary.tsx`, `ui/crowd.ts`, the REPLAY badge in `ui/MatchHud.tsx`): commentary captions under the pitch, the synthesised crowd, and the replay badge with its skip hint.
+- **Live socket** (`net/live.ts`): `useLive(topics, handler)` runs a handler when the server pushes a change, so rooms, chat, friends and duels update without fast polling.
 - **Leaderboard** (`/leaderboard`) and **achievements** (on the profile).
 - **Quick chat**: the Chat button at the bottom of an online match.
 
@@ -54,11 +56,12 @@ Toasts close themselves after their duration (invites after 10 s) through `Toast
 | `/` | Home | Tiles: World Cup (the live run or "Start"), Play a friend, Practice, Your record. Signed out: Sign in |
 | `/login`, `/signup`, `/reset-password`, `/welcome` | Account | Sign-up is a wizard (email → code → password → player name) with a live name-availability check, show-password, resend cooldown; the email is remembered |
 | `/world-cup` | World Cup | Nation grid with search and confederation filters and a detail panel; then the run hub: next match card, My group / All groups / Knockouts tabs |
-| `/online` | Online | Create a room, enter a 5-character code, friends with online dots and Invite, recent matches; the lobby is a versus screen with team panels, nation picker, ready state, chat and a share block (code, copy link, share sheet, QR) |
-| `/practice` | Practice | Pick both teams, start |
-| `/settings` | Settings | Tabs: Keyboard, Controller, Touch, Gameplay (CPU difficulty), Audio; opens on the tab for the device in use |
-| `/profile` | Profile | Name, favourite nation, record, head-to-head, recent matches, sign out, delete account |
-| `/match` | Match | Full viewport, outside the shell: intro card (teams and controls for your device) → play → pause menu → result panel |
+| `/online` | Online | A **Game** switch (11 v 11 match or penalty duel), **Find a match** (matchmaking with a search timer and cancel), create a room, enter a 5-character code, the **daily challenge** card with streak, friends with online dots and Invite, recent matches; the lobby is a versus screen with team panels, nation picker, ready state, chat and a share block (code, copy link, share sheet, QR) |
+| `/practice` | Practice | Choose Practice, an 11 v 11 friendly or a penalty shootout, pick both teams, start |
+| `/settings` | Settings | Tabs: Keyboard (with a **Layout** switch: FIFA classic, EA FC WASD, Custom), Controller (EA FC layout), Touch, Gameplay (CPU difficulty, match length, goal replays, commentary), Audio; opens on the tab for the device in use |
+| `/profile` | Profile | Name, **rating**, favourite nation, record, head-to-head, recent matches, achievements, sign out, delete account |
+| `/leaderboard` | Leaderboard | Rank by **Rating** or **Points** |
+| `/match` | Match | Full viewport, outside the shell. A match: intro card (teams and controls for your device) → play → pause menu → result panel. A **penalty duel** (`DuelStage`): a goal with six zone buttons, a countdown bar, the kick dots of both sides, a reveal of every kick, and a result panel with the rating change, rematch and share |
 | `/terms`, `/privacy` | Legal | |
 
 The match screen's HUD (`ui/MatchHud.tsx`) is a broadcast-style scoreboard with flags, name plates for the active players, and a charge bar; stats bars and card counts appear in the result panel.

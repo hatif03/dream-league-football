@@ -7,22 +7,27 @@ If you only want the endpoint list, see [API.md](API.md). For the online match p
 ## Contents
 
 1. [Why Serverpod, and what it does here](#1-why-serverpod-and-what-it-does-here)
-2. [Project layout](#2-project-layout)
-3. [Authentication](#3-authentication)
-4. [Endpoints and how the web app calls them](#4-endpoints-and-how-the-web-app-calls-them)
-5. [Data model and migrations](#5-data-model-and-migrations)
-6. [Concurrency: transactions and row locks](#6-concurrency-transactions-and-row-locks)
-7. [The web server: hosting the app and the relay](#7-the-web-server-hosting-the-app-and-the-relay)
-8. [Rules the server enforces](#8-rules-the-server-enforces)
-9. [Configuration and secrets](#9-configuration-and-secrets)
-10. [Local development](#10-local-development)
-11. [Testing](#11-testing)
-12. [Serverpod Cloud: deploy and operate](#12-serverpod-cloud-deploy-and-operate)
-13. [Working on the server: conventions](#13-working-on-the-server-conventions)
+2. [Serverpod features at a glance](#2-serverpod-features-at-a-glance)
+3. [Project layout](#3-project-layout)
+4. [Authentication](#4-authentication)
+5. [Endpoints and how the web app calls them](#5-endpoints-and-how-the-web-app-calls-them)
+6. [Data model and migrations](#6-data-model-and-migrations)
+7. [Concurrency: transactions and row locks](#7-concurrency-transactions-and-row-locks)
+8. [Server-refereed games: penalty duels, matchmaking and ratings](#8-server-refereed-games-penalty-duels-matchmaking-and-ratings)
+9. [Live push: the `/live` WebSocket](#9-live-push-the-live-websocket)
+10. [Future calls: scheduled work](#10-future-calls-scheduled-work)
+11. [Cloud storage and shareable results](#11-cloud-storage-and-shareable-results)
+12. [The web server: app, relay, live socket, share pages](#12-the-web-server-app-relay-live-socket-share-pages)
+13. [Rules the server enforces](#13-rules-the-server-enforces)
+14. [Configuration and secrets](#14-configuration-and-secrets)
+15. [Local development](#15-local-development)
+16. [Testing](#16-testing)
+17. [Serverpod Cloud: deploy and operate](#17-serverpod-cloud-deploy-and-operate)
+18. [Working on the server: conventions](#18-working-on-the-server-conventions)
 
 ## 1. Why Serverpod, and what it does here
 
-The football match itself runs in a player's browser (TypeScript, on a canvas). Everything that has to **outlive the tab or be trusted by two people** lives on the server:
+The 11 v 11 football match itself runs in a player's browser (TypeScript, on a canvas). Everything that has to **outlive the tab or be trusted by two people** lives on the server, and the games where cheating would be easy are played *on* the server:
 
 | Need | Serverpod provides |
 | --- | --- |
@@ -30,37 +35,65 @@ The football match itself runs in a player's browser (TypeScript, on a canvas). 
 | A solo World Cup that survives a refresh | Tables, endpoints, and server-side simulation of the other games |
 | Introducing two browsers to each other | The `FriendMatch` row carries the WebRTC offer and answer |
 | A match result neither player can forge alone | Two signed claims compared on the server, written under a row lock |
-| Notifying a friend that you left, joined, or invited them | Polled endpoints backed by tables and a presence timestamp |
+| **A game two strangers can trust** | The **penalty duel**: the server is the referee, so there is nothing in a browser to tamper with |
+| **Finding an opponent** | A **matchmaking queue** with a widening rating window, served by endpoints and a table |
+| **A ladder** | **Elo ratings** updated inside the transaction that finishes a match, with an anti-farming cap |
+| **Instant updates** | A `/live` **WebSocket route** that pushes "something changed" to the right players |
+| **Work that must happen later** | **Future calls**: a nightly clean-up on a cron schedule, and a timeout for every penalty kick |
+| **Pictures people can share** | **Cloud storage** for result images and a **web route** that serves `/r/<id>` pages with Open Graph previews |
 | A fallback when peer-to-peer fails | A WebSocket relay route on Serverpod's web server |
 | Hosting the game itself | The same web server serves the built React app |
 | Email for sign-up codes | Serverpod Cloud's built-in email service |
 | Database, TLS, scaling, secrets | Serverpod Cloud (`scloud`) |
 
-What Serverpod deliberately does **not** do: run the live match. A 22-player simulation at 60 frames per second is far cheaper in one browser than in a server loop per room, and it keeps latency down. See [MULTIPLAYER.md](MULTIPLAYER.md) for the reasoning and the consequences (host-authoritative simulation, signed results, plausibility checks).
+What Serverpod deliberately does **not** do: run the live 11 v 11 match. A 22-player simulation at 60 frames per second is far cheaper in one browser than in a server loop per room, and it keeps latency down. See [MULTIPLAYER.md](MULTIPLAYER.md) for the reasoning and the consequences (host-authoritative simulation, signed results, plausibility checks). The penalty duel is the opposite design on purpose: a turn-based game is cheap for a server to referee, so the server does.
 
-## 2. Project layout
+## 2. Serverpod features at a glance
+
+| Serverpod feature | Where it is used | Section |
+| --- | --- | --- |
+| **Email identity provider** (`serverpod_auth_idp`) | Sign-up with emailed code, sign-in, password reset | [4](#4-authentication) |
+| **JWT token manager** | 10-minute access tokens + refresh; the same token authenticates endpoints, `/relay` and `/live` | [4](#4-authentication) |
+| **Endpoints** (`requireLogin`) | 16 endpoint classes (two generated by the auth module): profile, tournament, lobby, friendMatch, friends, chat, report, rankings, challenges, matchmaking, penalty, share, liveOps, admin | [5](#5-endpoints-and-how-the-web-app-calls-them) |
+| **Models and ORM** (`.spy.yaml`) | 15 tables; typed queries with `where`, `orderBy`, `count`, `deleteWhere` | [6](#6-data-model-and-migrations) |
+| **Transactions and row locks** | `LockMode.forUpdate` on lobbies, matches, kicks, queue entries and ratings | [7](#7-concurrency-transactions-and-row-locks) |
+| **Migrations** | 10 versioned migrations applied at boot | [6](#6-data-model-and-migrations) |
+| **Future calls** | `MaintenanceFutureCall.nightly` (cron `0 3 * * *`) and `DuelFutureCall.kickTimeout` (scheduled per kick) | [10](#10-future-calls-scheduled-work) |
+| **Web server routes** (Relic) | `RelayRoute` (`/relay/:id`), `LiveRoute` (`/live`), `ShareRoute` (`/r/:id`), `SpaRoute` (the app) | [12](#12-the-web-server-app-relay-live-socket-share-pages) |
+| **WebSockets** | `/live` push channel and `/relay` match transport, JWT-authenticated | [9](#9-live-push-the-live-websocket) |
+| **Cloud storage** | Public storage for result pictures; `session.storage.storeFile` and `publicDownloadUrl` | [11](#11-cloud-storage-and-shareable-results) |
+| **Server configuration** | `maxRequestSize`, `passwords.yaml`, per-environment YAML | [14](#14-configuration-and-secrets) |
+| **Embedded PostgreSQL** | Local development and tests need no Docker | [15](#15-local-development) |
+| **Testing** (`serverpod_test`) | Integration tests that call real endpoints against a database | [16](#16-testing) |
+| **Serverpod Cloud** (`scloud`) | One-command deploy of server, database, web app, email, secrets | [17](#17-serverpod-cloud-deploy-and-operate) |
+
+## 3. Project layout
 
 ```
 football/
 ├── pubspec.yaml                 # Dart workspace: football_server + football_client
 ├── football_server/
 │   ├── bin/main.dart            # entry point -> lib/server.dart
-│   ├── lib/server.dart          # Serverpod init: auth, cloud storage, relay route, SPA route
+│   ├── lib/server.dart          # Serverpod init: auth, cloud storage, web routes, recurring future call
 │   ├── lib/src/
 │   │   ├── auth/                # EmailIdpEndpoint, JwtRefreshEndpoint, current_user helper
 │   │   ├── profile/             # display name, record, account deletion
 │   │   ├── tournament/          # solo World Cup: group logic, knockout bracket, endpoint
-│   │   ├── friend/              # lobbies, friend matches, claims, relay route
-│   │   ├── social/              # friends, blocks, invites, chat, reports, presence helpers
-│   │   ├── rankings/            # leaderboard and achievements
+│   │   ├── friend/              # lobbies, friend matches, claims, relay route, penalty duel
+│   │   ├── matchmaking/         # the queue and pairing
+│   │   ├── ratings/             # Elo maths and the service that applies it
+│   │   ├── live/                # the /live WebSocket route and the in-memory hub
+│   │   ├── future_calls/        # DuelFutureCall, MaintenanceFutureCall
+│   │   ├── social/              # friends, blocks, invites, chat, reports, shared results
+│   │   ├── rankings/            # leaderboard, achievements, daily challenge
 │   │   ├── admin/               # public maintenance status + operator tools
+│   │   ├── util/                # rate limiter, nightly maintenance
 │   │   ├── data/world_cup_data.dart   # GENERATED from the TypeScript teams
-│   │   ├── util/rate_limit.dart # in-memory token bucket
 │   │   ├── generated/           # Serverpod code generator output (never edit)
 │   │   └── **/*.spy.yaml        # model definitions
-│   ├── migrations/              # 9 generated migrations (+ registry)
+│   ├── migrations/              # 10 generated migrations (+ registry)
 │   ├── config/                  # development / staging / production / test + passwords
-│   ├── test/                    # unit tests
+│   ├── test/                    # unit tests, and test/integration (serverpod_test)
 │   ├── web/spa/                 # the built React app (npm run build:web), served by the web server
 │   └── scloud.yaml              # Serverpod Cloud project: "football"
 └── football_client/             # generated Dart client (not used by the web app)
@@ -68,7 +101,7 @@ football/
 
 The Dart package names (`football_server`, `football_client`) and the Cloud project id (`football`) predate the game's rename to Dream League Football and stay as they are: the project id fixes the public URLs.
 
-## 3. Authentication
+## 4. Authentication
 
 Authentication is Serverpod's own `serverpod_auth_idp` with the **email identity provider** and the **JWT token manager**, configured in [`lib/server.dart`](../football/football_server/lib/server.dart):
 
@@ -99,17 +132,17 @@ Two thin endpoint subclasses expose the generated behaviour:
 
 Access tokens last **10 minutes**; the refresh token is stored with them in `localStorage`. The web client (`src/client/api/http.ts`) refreshes before expiry and once more on a 401, and maps Serverpod's authentication failure reasons to plain sentences ("Wrong email or password.").
 
-The server reads the caller with `session.authenticated?.userIdentifier` (see `lib/src/auth/current_user.dart`). Every game endpoint sets `requireLogin => true`, so Serverpod rejects anonymous calls before our code runs. The only public endpoint is `liveOps/get` (maintenance status).
+The server reads the caller with `session.authenticated?.userIdentifier` (see `lib/src/auth/current_user.dart`). Every game endpoint sets `requireLogin => true`, so Serverpod rejects anonymous calls before our code runs. The only public endpoint is `liveOps/get` (maintenance status). The WebSocket routes authenticate with the **same JWT**: the first frame must be `{"token": "<jwt>"}`, verified with `pod.authenticationHandler`.
 
 The auth module also defines a model named `UserProfile`; the game's own `UserProfile` table therefore imports the module with `import '...serverpod_auth_idp_server/core.dart' show AuthServices` to avoid a clash.
 
-## 4. Endpoints and how the web app calls them
+## 5. Endpoints and how the web app calls them
 
-Serverpod exposes every `Endpoint` method as an HTTP call: `POST /<endpoint>/<method>` with a JSON body of named arguments and an `Authorization: Bearer <jwt>` header. The React app uses plain `fetch` through a ~150-line client (`src/client/api/http.ts`) instead of the generated Dart client:
+Serverpod exposes every `Endpoint` method as an HTTP call: `POST /<endpoint>/<method>` with a JSON body of named arguments and an `Authorization: Bearer <jwt>` header. The React app uses plain `fetch` through a small client (`src/client/api/http.ts`) instead of the generated Dart client:
 
 ```ts
 // src/client/api/friend.ts
-export const createLobby = () => call<LobbyView>('lobby/create', { clientVersion: CLIENT_VERSION });
+export const createLobby = (mode = 'match') => call<LobbyView>('lobby/create', { clientVersion: CLIENT_VERSION, mode });
 ```
 
 Errors thrown on the server as `GameException` (a model in `game_exception.spy.yaml`) arrive as readable messages and are shown inline.
@@ -119,16 +152,20 @@ Errors thrown on the server as `GameException` (a model in `game_exception.spy.y
 | `emailIdp`, `jwtRefresh` | Sign-up, sign-in, password reset, token refresh | generated by Serverpod |
 | `profile` | Profile, display-name check, favourite nation, record, delete account | [API.md](API.md#profile) |
 | `tournament` | Solo World Cup run | [API.md](API.md#tournament) |
-| `lobby` | Rooms: create, join by code, nation, ready, rematch, leave | [API.md](API.md#lobby) |
+| `lobby` | Rooms: create (match or penalty duel), join by code, nation, ready, rematch, leave | [API.md](API.md#lobby) |
 | `friendMatch` | Handshake, connected, leave, signed result, history | [API.md](API.md#friendmatch) |
+| `matchmaking` | Find an opponent: join, status, cancel | [API.md](API.md#matchmaking) |
+| `penalty` | The server-refereed penalty duel: state, submit a kick | [API.md](API.md#penalty) |
 | `friends` | Friend list, requests, blocks, invites, presence | [API.md](API.md#friends) |
-| `rankings` | Leaderboard and achievements, computed from stored matches and runs | [API.md](API.md#rankings) |
+| `rankings` | Leaderboard by rating or points, achievements | [API.md](API.md#rankings) |
+| `challenges` | Today's daily challenge, progress and streak | [API.md](API.md#challenges) |
+| `share` | Store a result picture, get its public link | [API.md](API.md#share) |
 | `chat`, `report` | Lobby chat, player reports | [API.md](API.md#chat-and-report) |
 | `liveOps`, `admin` | Maintenance status; operator tools | [API.md](API.md#liveops-and-admin) |
 
 After changing an endpoint signature, run `serverpod generate` and update the matching TypeScript in `src/client/api/`.
 
-## 5. Data model and migrations
+## 6. Data model and migrations
 
 Models are `.spy.yaml` files next to the code that uses them. `serverpod generate` turns them into Dart classes, the ORM and the protocol; `serverpod create-migration` writes a SQL migration. The server applies pending migrations at boot (`--apply-migrations`).
 
@@ -136,11 +173,14 @@ Models are `.spy.yaml` files next to the code that uses them. `serverpod generat
 
 | Table | Model | What it stores |
 | --- | --- | --- |
-| `user_profile` | `UserProfile` | One per account: unique `displayName` (+ lower-cased `displayNameLower` with a unique index), `favouriteNation`, `avatar` (0–23, one of the pre-made avatars), `settings` and `club` (JSON the player saved), `termsAcceptedAt`, `bannedUntil`, `lastSeenAt` (presence) |
+| `user_profile` | `UserProfile` | One per account: unique `displayName` (+ lower-cased `displayNameLower` with a unique index), `favouriteNation`, `avatar` (0–23), `settings` and `club` (JSON), **`rating`** (Elo, default 1000), `termsAcceptedAt`, `bannedUntil`, `lastSeenAt` (presence) |
 | `tournament` | `Tournament` | A solo run: owner, nation, `status` (`group`, `r32`, `r16`, `qf`, `sf`, `final`, `eliminated`, `champion`) |
 | `tournament_fixture` | `TournamentFixture` | Every game of the run (72 group + knockout ties): teams, score, shootout goals, `decidedBy` (`90`/`et`/`pens`), `playedByUser`, idempotency nonce |
-| `lobby` | `Lobby` | A room: unique 5-character `code`, host and guest, nations, ready flags, `status` (`open`/`live`/`closed`), `clientVersion`, link to the match and to a rematch room |
-| `friend_match` | `FriendMatch` | The match: players, nations, `status` (`live`/`finished`/`abandoned`/`void`), both players' signed claims, final goals, `endReason`, `winnerUserId`, `leaverUserId`, WebRTC `offer`/`answer`, `transport`, JSON `stats` |
+| `lobby` | `Lobby` | A room: unique 5-character `code`, host and guest, nations, ready flags, **`mode`** (`match`/`penalties`), `status` (`open`/`live`/`closed`), `clientVersion`, link to the match and to a rematch room |
+| `friend_match` | `FriendMatch` | The match: players, nations, **`mode`**, `status` (`live`/`finished`/`abandoned`/`void`), both players' signed claims, final goals, `endReason`, `winnerUserId`, `leaverUserId`, WebRTC `offer`/`answer`, `transport`, JSON `stats`, **`hostRatingDelta` / `guestRatingDelta`** |
+| `penalty_kick` | `PenaltyKick` | One kick of a duel: shooter, the two secret zone choices, `outcome` (`goal`/`saved`/`miss`/`post`), `deadline`, `resolvedAt`; unique per `(matchId, seq)` |
+| `queue_entry` | `QueueEntry` | A player waiting for an opponent: mode, build id, rating at join, `joinedAt`, `lastPollAt`, and the room once paired; unique per user |
+| `shared_result` | `SharedResult` | A result a player shared: title, description and the cloud-storage path of the picture; backs the `/r/<id>` link |
 | `friendship` | `Friendship` | Directed request or accepted friendship, unique per pair |
 | `user_block` | `UserBlock` | Who blocked whom |
 | `lobby_invite` | `LobbyInvite` | An invite to a room, unique per room and recipient |
@@ -151,21 +191,21 @@ Models are `.spy.yaml` files next to the code that uses them. `serverpod generat
 
 Plus the tables owned by `serverpod_auth_idp` (accounts, email credentials, refresh tokens) which Serverpod manages itself.
 
-Non-persisted models (`*View`, `HeadToHead`, `RecordView`, `AdminStats`, `LiveStatus`, ...) are response shapes: they are what endpoints return so that the client never sees other users' ids it should not, or raw rows.
+Non-persisted models (`*View`, `DuelView`, `KickView`, `QueueStatus`, `ChallengeView`, `ShareLink`, `KickDue`, `HeadToHead`, `RecordView`, `AdminStats`, `LiveStatus`, ...) are response shapes and payloads: they are what endpoints return so that the client never sees other users' ids it should not, or raw rows. `DuelView` in particular never contains the opponent's choice for a kick that is not settled yet.
 
 Users are referenced by their auth user id as a plain `String` (the auth module's UUID), not a foreign key. That makes **account deletion** simple and safe: personal rows are removed or nulled, and finished friend matches stay for the other player, who then sees "Removed player".
 
 ### Migrations
 
-`football_server/migrations/` holds nine migrations (the schema, then additive changes such as `lastSeenAt` and `avatar`). The checked-in `migration_registry.txt` lists them. Rules:
+`football_server/migrations/` holds ten migrations (the schema, then additive changes such as `lastSeenAt`, `avatar`, and the penalty/matchmaking/rating/share tables). Every new column on an existing table has a database default, so a migration never needs a data backfill. The checked-in `migration_registry.txt` lists them. Rules:
 
 - Always create a migration after changing a model that has a `table`: `serverpod create-migration` (add `--force` for destructive changes).
 - Never edit generated files. A migration's `migration.sql` may be hand-edited only to avoid data loss, and the schema it ends with must still equal `definition.sql`.
 - A new database is created from `definition.sql` and never replays migrations.
 
-## 6. Concurrency: transactions and row locks
+## 7. Concurrency: transactions and row locks
 
-Two players act on the same `Lobby` or `FriendMatch` row within milliseconds of each other, most importantly when both sign the full-time score. A plain read-modify-write would let the second save overwrite the first. Every such write therefore uses a transaction with `lockMode: LockMode.forUpdate`:
+Two players act on the same `Lobby` or `FriendMatch` row within milliseconds of each other, most importantly when both sign the full-time score or both choose a penalty zone. A plain read-modify-write would let the second save overwrite the first. Every such write therefore uses a transaction with `lockMode: LockMode.forUpdate`:
 
 ```dart
 await session.db.transaction((tx) async {
@@ -175,38 +215,117 @@ await session.db.transaction((tx) async {
 });
 ```
 
-This was a real bug found during development (a lost update between two simultaneous claims) and is the reason `_update` helpers exist in `lobby_endpoint.dart` and `friend_match_endpoint.dart`. Do not bypass them.
+This was a real bug found during development (a lost update between two simultaneous claims) and is the reason `_update` helpers exist in `lobby_endpoint.dart` and `friend_match_endpoint.dart`. Do not bypass them. The newer features follow the same rule:
 
-## 7. The web server: hosting the app and the relay
+- **Penalty duel.** `submitKick` and `advanceDuel` lock the `FriendMatch` row, so a double submit, a timeout and a poll can race safely; the first zone chosen for a kick stands.
+- **Matchmaking.** `_tryPair` locks both `QueueEntry` rows, creates the room, the match and the first kick in one transaction, and marks both entries paired. Two players asking at the same instant cannot be paired twice. Reading a pairing (`_status`) deletes the entry with an idempotent `deleteWhere`, because a live push and a poll can ask at once.
+- **Ratings.** `applyRatings` runs inside the transaction that finishes the match, with both profiles locked, so a rating is never updated twice or from a stale value.
 
-Serverpod 4's web server (built on Relic) is used for two things the JSON endpoints cannot do. Both are registered in `lib/server.dart`:
+## 8. Server-refereed games: penalty duels, matchmaking and ratings
+
+### The penalty duel
+
+A duel is five penalties each (then sudden death). The goal is split into six zones (top/bottom × left/centre/right). On each kick **both** players choose a zone in secret: the shooter where to shoot, the keeper where to dive. The server draws the result with `Random.secure()` (`friend/penalty_rules.dart`):
+
+- aiming at a corner can go wide or hit the post (corners are riskier, the bottom centre is the safest);
+- the keeper saves when diving to the shooter's zone, sometimes when diving to the right side but the wrong height (35 %), and rarely when diving to the neighbouring zone at the same height (10 %);
+- the first five kicks each decide it, with the standard early finish when one side can no longer be caught; sudden death is decided after complete pairs.
+
+Why the server: nothing is simulated in a browser, so there is nothing to tamper with, no host advantage, no input latency advantage. A request is a number from 0 to 5. `DuelView` hides the other player's choice until the kick is settled.
+
+Flow (`friend/penalty_endpoint.dart`, `friend/penalty_duel.dart`):
+
+1. A `lobby` with `mode = 'penalties'` (made by a friend room or by matchmaking) starts a `FriendMatch` with `mode = 'penalties'`, and `startDuel` inserts kick 0 with a 25-second `deadline` in the same transaction.
+2. Each player calls `penalty/submit(matchId, seq, zone)`. The first choice for a kick stands.
+3. When both have chosen, or the deadline passed, `resolveIfReady` fills in the missing choice at random, draws the outcome, and either opens kick `seq + 1` or finishes the match (winner, goals, `endReason = 'penalties'`, ratings).
+4. `penalty/state` returns the `DuelView` and settles an overdue kick lazily. A **future call** (below) settles it even if both browsers have closed.
+5. Every change pushes a `duel` event over `/live` to both players.
+
+### Matchmaking
+
+`matchmaking/join(mode, clientVersion)` inserts a `QueueEntry` (replacing the caller's old one). Pairing considers waiting players of the same mode and build who polled in the last 20 seconds, nobody blocked either way, and rating within `100 + 15 × secondsWaited` points: a wide net the longer both wait. The player who waited longer hosts. The server picks each player's favourite nation if set (otherwise a random one, never the same twice), creates a ready room, starts the match and pushes a `queue` event. `matchmaking/status` keeps the search alive (it is also the client's fallback poll) and `cancel` leaves the queue.
+
+### Ratings
+
+`ratings/elo.dart` is plain Elo with K = 24 for a match and K = 16 for a duel, a draw worth half, a floor of 100 and a ceiling of 4000. `ratings/rating_service.dart` applies it inside the finishing transaction, writes the deltas onto the match (`hostRatingDelta`, `guestRatingDelta`) and invalidates the leaderboard cache. After **five finished matches between the same two players in 24 hours** further ones are worth 0, so two friends cannot trade wins to climb. Abandoned and void matches change nothing. The leaderboard can rank by `rating` or by `points`; the profile and the result screens show the change.
+
+### Daily challenge
+
+`challenges/today` returns one challenge a day (play 2 matches, win a duel, score 4 goals, ...). It is derived from the UTC date (`rankings/challenge_rules.dart`, pure and unit-tested), and progress and the streak are computed from the finished matches already stored. Nothing extra is written.
+
+## 9. Live push: the `/live` WebSocket
+
+Polling every second is wasteful and slow. `LiveRoute` (`live/live_route.dart`) is a web-server route that keeps one WebSocket per browser open:
+
+1. Connect to `wss://football.serverpod.space/live` and send `{"token": "<jwt>"}` within 8 seconds; the server verifies it and replies `{"live":"ok"}`. Anything else closes the socket (`4003`, or `4008` on timeout).
+2. Endpoints call `liveHub.notify(userIds, topic, id?)` after they change something. The hub (`live/live_hub.dart`) sends `{"t": "<topic>", "id": "<room or match>"}` to every socket those users hold (at most 4 tabs each).
+3. Topics: `friends`, `lobby`, `chat`, `match`, `duel`, `queue`. The browser refetches only what changed (`src/client/net/live.ts`, the `useLive` hook).
+
+The socket carries **no game data**, only "this changed", so a lost event costs nothing: screens keep a slow poll as a safety net and refetch everything when the socket reconnects. While the socket is open the room poll drops from 1 s to 8 s, chat from 2 s to 10 s and the friends poll from 6 s to 20 s.
+
+Serverpod's own streaming endpoints need its generated Dart client; the web app is TypeScript, so the push channel is a plain web-server route using the same JWT handler. The hub keeps sockets in this instance's memory; with several server instances events would travel through Serverpod's message central or Redis. One instance covers this game (the code marks the ceiling).
+
+## 10. Future calls: scheduled work
+
+Serverpod **future calls** are methods the server runs later, stored in the database so they survive restarts. Both are generated into typed scheduling helpers by `serverpod generate`:
+
+| Future call | Scheduled | What it does |
+| --- | --- | --- |
+| `MaintenanceFutureCall.nightly` | Recurring, cron `0 3 * * *` (03:00 UTC), registered in `server.dart` | `util/maintenance.dart`: closes rooms idle for 3 h, voids matches still live after 6 h (and duels with a kick overdue for long), removes stale queue entries, old invites and chat lines; logs what it did |
+| `DuelFutureCall.kickTimeout` | Once per kick, at its deadline + 3 s | Settles the kick (random choice for whoever did not choose) so a duel moves on even if both players closed their tabs |
 
 ```dart
-pod.webServer.addRoute(RelayRoute(pod.authenticationHandler!));
+// server.dart: a recurring, database-backed job
+await pod.futureCalls.cancel('nightly-maintenance');
+await pod.futureCalls.callRecurring(identifier: 'nightly-maintenance').cron('0 3 * * *').maintenance.nightly();
+
+// friend/duel_schedule.dart: one call per kick
+await session.serverpod.futureCalls
+    .callAtTime(at.add(const Duration(seconds: 2)), identifier: 'duel-$matchId-$seq')
+    .duel.kickTimeout(KickDue(matchId: matchId, seq: seq));
+```
+
+The duel settles on whichever comes first: a player's request, the lazy check in `penalty/state`, or the future call. All three go through the same locked, idempotent `advanceDuel`.
+
+## 11. Cloud storage and shareable results
+
+`server.dart` registers Serverpod Cloud's **public** storage (falling back to database storage locally). When a player taps "Share result", the app draws the score card on a canvas and calls `share/createResult(pngBase64, title, description)`. The endpoint checks the PNG signature and size (2 MB), stores the file with `session.storage.storeFile(storageId: 'public', path: 'results/<id>.png', ...)`, writes a `shared_result` row and returns the id. It is rate limited (12 per hour). `maxRequestSize` is raised to 3 MB in the three environment configs for this upload.
+
+The link `https://football.serverpod.space/r/<id>` is served by `ShareRoute`: an HTML page with Open Graph and Twitter-card tags whose `og:image` is `session.storage.publicDownloadUrl(...)`, so chat apps show the score picture as a preview, plus a button that opens the game. Unknown or malformed ids fall through to the app. Signed-out players, or a failed upload, fall back to sharing or downloading the picture itself.
+
+## 12. The web server: app, relay, live socket, share pages
+
+Serverpod 4's web server (built on Relic) is used for what the JSON endpoints cannot do. All four routes are registered in `lib/server.dart`:
+
+```dart
+pod.webServer.addRoute(RelayRoute(pod.authenticationHandler!));   // /relay/:matchId
+pod.webServer.addRoute(LiveRoute(pod.authenticationHandler!));    // /live
+pod.webServer.addRoute(ShareRoute());                             // /r/:id
 pod.webServer.addRoute(SpaRoute(Directory('web/spa'), fallback: File('web/spa/index.html')));
 ```
 
-- **`SpaRoute`** serves the built React app (`npm run build:web` copies `dist/` into `football_server/web/spa`) with `index.html` as the single-page fallback, so deep links such as `/online?join=ABCDE` work. Because the page and the relay share one origin in production there is no CORS or cookie configuration. (The API lives on its sibling host `football.api.serverpod.space`, which the page derives from its own host.)
+- **`SpaRoute`** serves the built React app (`npm run build:web` copies `dist/` into `football_server/web/spa`) with `index.html` as the single-page fallback, so deep links such as `/online?join=ABCDE` work. Because the page and the sockets share one origin in production there is no CORS or cookie configuration. (The API lives on its sibling host `football.api.serverpod.space`, which the page derives from its own host.)
 - **`RelayRoute`** is the WebSocket fallback for friend matches whose browsers cannot connect directly: `/relay/<matchId>`. The first frame must be `{"token": "<jwt>"}` within 8 seconds; the server verifies the token with the same authentication handler as the endpoints and admits only the two players of a **live** match. After that it forwards every text frame (max 64 KB) untouched to the other player, with a 20-second ping. Close codes are application codes in the 3000–4999 range (4003 refused, 4008 timed out), because Relic rejects others.
+- **`LiveRoute`** and **`ShareRoute`** are described in sections [9](#9-live-push-the-live-websocket) and [11](#11-cloud-storage-and-shareable-results).
 
-Neither route is required for the JSON API; if `web/spa` does not exist the SPA route is simply not added.
+None of these routes is required for the JSON API; if `web/spa` does not exist the SPA route is simply not added.
 
-## 8. Rules the server enforces
+## 13. Rules the server enforces
 
 All of these live in the endpoints, not the client:
 
-- **Authorization.** A lobby, match or signal is visible only to its participants; a tournament only to its owner. Friend and block checks run on invites and joins.
+- **Authorization.** A lobby, match, duel or signal is visible only to its participants; a tournament only to its owner. Friend and block checks run on invites, joins and matchmaking pairing.
 - **Unique names**, case-insensitively, validated (3–16 of `A–Z a–z 0–9 _ -`), with a profanity mask for chat.
-- **Rate limits** (`util/rate_limit.dart`, in-memory per user and action; fine for one instance): create room 6/min, join 20/min, claim 20/min, chat 8 per 10 s, friend request 10 per 10 min, invite 20 per 10 min, block 20 per 10 min, report 5/hour.
-- **Version check.** A lobby records the client's build id (a hash of `src/client/game/**`, injected by Vite); joining with a different build is refused, because host and guest must run the same engine.
-- **Maintenance mode.** While `live_ops.maintenance` is true no new rooms open; sign-in and running matches continue.
+- **Rate limits** (`util/rate_limit.dart`, in-memory per user and action; fine for one instance): create room 6/min, join 20/min, claim 20/min, queue join 10/min, duel submit 60/min, share 12/hour, chat 8 per 10 s, friend request 10 per 10 min, invite 20 per 10 min, block 20 per 10 min, report 5/hour.
+- **Version check.** A lobby records the client's build id (a hash of `src/client/game/**`, injected by Vite); joining with a different build is refused, and matchmaking only pairs equal builds, because host and guest must run the same engine.
+- **Maintenance mode.** While `live_ops.maintenance` is true no new rooms open and nobody can join the queue; sign-in and running matches continue.
 - **Suspensions.** `requireProfile` (used by every game endpoint) refuses a player whose `bannedUntil` is in the future with "This account is suspended.".
 - **Tournament integrity.** A submitted score must belong to the caller's run, be the next unplayed fixture, be an integer 0–30; a repeated `nonce` returns the stored state, so retries are safe. Group games on the same matchday are simulated server-side (never future ones); a level knockout game requires shootout goals.
-- **Result signing** (`friend/claims.dart`). Each player posts a claim `hostGoals:guestGoals:reason:leaver`. When both claims are identical the match is stored `finished`. If one player leaves, `friendMatch/leave` ends it at once as `abandoned` with the leaver recorded. If only one player has claimed, the other has a 45-second grace: after that a lone "the opponent left" claim is stored as `abandoned`, while a lone full-time signature is stored as `void` (nobody is given the win). Two claims that differ are stored as `void` (`mismatch`). A live match with no claims after 4 hours is closed as `void` (`timeout`). Abandoned and void matches count for nobody. Unit tests: `test/claims_test.dart`.
+- **Result signing** (`friend/claims.dart`). Each player posts a claim `hostGoals:guestGoals:reason:leaver`. When both claims are identical the match is stored `finished`. If one player leaves, `friendMatch/leave` ends it at once as `abandoned` with the leaver recorded. If only one player has claimed, the other has a 45-second grace: after that a lone "the opponent left" claim is stored as `abandoned`, while a lone full-time signature is stored as `void` (nobody is given the win). Two claims that differ are stored as `void` (`mismatch`). A live match with no claims after 4 hours is closed as `void` (`timeout`). Abandoned and void matches count for nobody. Unit tests: `test/claims_test.dart`. Penalty duels have no claims: the server decides, so `friendMatch/claim` refuses them.
 - **Presence.** `friends/list` checks the caller in (throttled to once per 25 s) by setting `lastSeenAt`; a player is "online" for 75 seconds afterwards.
 - **Idle rooms.** An open lobby idle for 3 hours reads as closed; creating a room closes the player's older open rooms.
 
-## 9. Configuration and secrets
+## 14. Configuration and secrets
 
 `football_server/config/`:
 
@@ -217,6 +336,8 @@ All of these live in the endpoints, not the client:
 | `passwords.yaml` | Database password, JWT signing key, peppers, service secret | **no** (git-ignored and excluded from Cloud uploads) |
 | `passwords.example.yaml` | The same keys with placeholders | yes |
 
+`maxRequestSize` is 3 MB in development, staging and production (Serverpod's default is 512 KB) because result pictures are uploaded as base64.
+
 Create your own `passwords.yaml` by copying the example and replacing every `<generate>` with a long random string (for example `openssl rand -base64 48`). Serverpod Cloud generates and manages the production values; extra secrets are set with the CLI:
 
 ```bash
@@ -226,7 +347,7 @@ scloud password --help                  # list and remove passwords too
 
 Passwords set that way are available to the server as `session.serverpod.getPassword('adminUserIds')`.
 
-## 10. Local development
+## 15. Local development
 
 Prerequisites: Dart SDK (ships with Flutter) and the Serverpod CLI: `dart pub global activate serverpod_cli`. **No Docker is required**: `config/development.yaml` sets `database.dataPath: .serverpod/development/pgdata`, so Serverpod starts and manages an embedded PostgreSQL itself.
 
@@ -239,32 +360,46 @@ serverpod create-migration                                   # only after changi
 dart bin/main.dart --apply-migrations --role monolith        # API on :8080, web server on :8082
 ```
 
+If something else already uses port 8080 (Docker Desktop apps often do), override the ports with environment variables and point the web app at them:
+
+```bash
+SERVERPOD_API_SERVER_PORT=8180 SERVERPOD_API_SERVER_PUBLIC_PORT=8180 \
+SERVERPOD_INSIGHTS_SERVER_PORT=8181 SERVERPOD_WEB_SERVER_PORT=8182 dart bin/main.dart --apply-migrations
+# src/client/.env.local:  VITE_API_URL=http://127.0.0.1:8180   VITE_RELAY_URL=ws://127.0.0.1:8182
+```
+
+(`..._PUBLIC_PORT` makes the public storage URLs of shared pictures point at the right port.)
+
 The sign-up verification code and password-reset code are printed in the server's console (`Registration code for <email>: <123456>`); the browser tests read them from the log file given in `SERVER_LOG`. In another terminal `npm run dev` serves the web app on port 5173, which calls the API on `localhost:8080`.
 
 `lib/src/data/world_cup_data.dart` is generated from the TypeScript team files so the server knows every nation, group and fixture. After changing a roster, rating, group or fixture run `npm run export:data` in the repository root.
 
-## 11. Testing
+## 16. Testing
 
 ```bash
 cd football/football_server
 dart test            # stop any running dev server first: it holds a native DLL on Windows
 ```
 
-`config/test.yaml` also uses an embedded database, so no Docker. The unit tests cover:
+`config/test.yaml` also uses an embedded database, so no Docker. The tests:
 
-- `group_logic_test.dart` — group tables and tie-break order (points, then head-to-head, then goal difference, goals scored, then a deterministic draw).
-- `knockout_test.dart` — the 32-team bracket is a proper tree ending in one final; every one of the C(12,8) = 495 sets of eight third-placed groups can fill the eight third-place slots; knockouts always have a winner.
-- `claims_test.dart` — matching claims, abandon, grace period, one-sided claims.
+| Test | Kind | Covers |
+| --- | --- | --- |
+| `group_logic_test.dart` | unit | group tables and tie-break order (points, head-to-head, goal difference, goals scored, deterministic draw) |
+| `knockout_test.dart` | unit | the 32-team bracket is a proper tree ending in one final; every one of the C(12,8) = 495 sets of eight third-placed groups can fill the eight third-place slots; knockouts always have a winner |
+| `claims_test.dart` | unit | matching claims, abandon, grace period, one-sided claims |
+| `duel_rules_test.dart` | unit | shootout rules (early finish, five each, sudden death decided after complete pairs), kick resolution odds, Elo (zero-sum, upsets, draws), the daily challenge and its streak |
+| `integration/duel_flow_test.dart` | **integration** (`serverpod_test`) | `withServerpod` calls the real `matchmaking`, `penalty` and `challenges` endpoints with authenticated sessions: two players are paired, a whole duel is played to the end, ratings move equally and oppositely, a stranger cannot read a duel, builds that differ are not paired. Each test runs in a rolled-back transaction |
 
-HTTP smoke tests and Playwright browser tests that exercise the server through the real web app are in `scripts/` — see [DEVELOPMENT.md](DEVELOPMENT.md#tests).
+HTTP smoke tests (`smoke-api`, `smoke-friend`, `smoke-social`, `smoke-relay`, `smoke-duel`, which also exercises the `/live` socket and the `/r/<id>` page) and Playwright browser tests that exercise the server through the real web app are in `scripts/` — see [DEVELOPMENT.md](DEVELOPMENT.md#tests).
 
-## 12. Serverpod Cloud: deploy and operate
+## 17. Serverpod Cloud: deploy and operate
 
 The game runs on **Serverpod Cloud**. Project id: `football` (`football_server/scloud.yaml`).
 
 | | |
 | --- | --- |
-| Web app + relay | <https://football.serverpod.space> |
+| Web app + relay + live socket + share pages | <https://football.serverpod.space> |
 | API | <https://football.api.serverpod.space> |
 
 ### Deploy
@@ -275,13 +410,13 @@ cd football/football_server
 scloud deploy --yes --non-interactive  # zips, uploads, builds (~2 min), rolls out (~1 min)
 ```
 
-Cloud applies the committed migrations at start-up, provisions the database and TLS, and routes the two hosts. The `.scloudignore` excludes `config/passwords.yaml` and the config files (Serverpod Cloud supplies its own) but keeps `web/**` and the generated code, so the built app ships with the server.
+Cloud applies the committed migrations at start-up, provisions the database and TLS, and routes the two hosts. The `.scloudignore` excludes `config/passwords.yaml` and the config files (Serverpod Cloud supplies its own) but keeps `web/**` and the generated code, so the built app ships with the server. After a deploy, `node scripts/check-live.mjs` checks the live site.
 
 ### Operate
 
 ```bash
 scloud status                          # project and deployment state
-scloud log                             # server logs
+scloud log                             # server logs (the nightly job logs "Nightly maintenance: ...")
 scloud build                           # build logs
 scloud db                              # database commands
 scloud password set adminUserIds <id>  # allow operator endpoints for these users
@@ -291,13 +426,14 @@ Operator endpoints (`admin/*`, callable only by the listed users): `stats`, `set
 
 ### Cost note
 
-The project is on the Serverpod Cloud Starter trial. A match uses almost no server resources while it is peer-to-peer; only the relay fallback keeps a socket open for the length of a match.
+The project is on the Serverpod Cloud Starter trial. A match uses almost no server resources while it is peer-to-peer; only the relay fallback keeps a socket open for the length of a match, and the live socket is idle except for tiny "changed" messages.
 
-## 13. Working on the server: conventions
+## 18. Working on the server: conventions
 
 - Never edit `lib/src/generated/` or `football_client/`. Change a model, an endpoint, or `server.dart`, then `serverpod generate`.
 - Run, in order: `dart analyze`, `dart format`, create/apply migrations if a model changed, restart the server, `dart test`.
-- Any write to a row both players can touch uses a transaction and `LockMode.forUpdate` (section 6).
+- Any write to a row both players can touch uses a transaction and `LockMode.forUpdate` (section 7).
 - New endpoints set `requireLogin => true` unless they must be public, and call `rateLimit(...)` if a user can spam them.
+- Anything a browser must be told promptly calls `liveHub.notify(...)` after the write (section 9); anything that must happen later is a future call (section 10).
 - Keep client and server in step: update `src/client/api/*.ts` when a signature changes and extend `scripts/smoke-*.mjs`.
 - More detail for contributors: [football/AGENTS.md](../football/AGENTS.md).

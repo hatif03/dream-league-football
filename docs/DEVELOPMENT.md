@@ -34,7 +34,7 @@ cd ../..
 npm run dev                                   # http://localhost:5173
 ```
 
-Practice mode works with only step 3. In development the **sign-up verification code is printed in the server console** (`Registration code for you@example.com: <123456>`), so you can create accounts without email.
+If port 8080 is taken (Docker Desktop apps often use it), run the server on other ports and tell the web app, see [Port conflicts](#port-conflicts). Practice mode works with only step 3. In development the **sign-up verification code is printed in the server console** (`Registration code for you@example.com: <123456>`), so you can create accounts without email.
 
 ## Everyday commands
 
@@ -48,7 +48,7 @@ Practice mode works with only step 3. In development the **sign-up verification 
 | Regenerate Serverpod code after a model or endpoint change | `cd football/football_server && serverpod generate` |
 | Create a database migration after a table model change | `serverpod create-migration` (add `--force` for destructive changes) |
 | Analyse / format the server | `dart analyze` / `dart format .` |
-| Server unit tests | `dart test` (stop a running dev server first) |
+| Server unit and integration tests | `dart test` (stop a running dev server first) |
 
 ### Changing things
 
@@ -71,17 +71,20 @@ export SERVER_LOG="$TEMP/sp_out.log"
 
 | Script | Needs | What it checks |
 | --- | --- | --- |
-| `dart test` (in `football_server`) | nothing running | Group tie-breaks, the 495 third-place combinations, the knockout bracket, claim resolution |
+| `dart test` (in `football_server`) | nothing running | Group tie-breaks, the 495 third-place combinations, the knockout bracket, claim resolution, shootout rules, kick odds, Elo, the daily challenge, and the `serverpod_test` integration test (matchmaking and a whole penalty duel through the real endpoints) |
 | `node scripts/smoke-api.mjs` | server | Sign-up, profile, a whole solo World Cup to the final, over HTTP |
 | `node scripts/smoke-friend.mjs` | server | Lobby, handshake, claims, leave, history over HTTP |
 | `node scripts/smoke-social.mjs` | server | Friends, blocks, invites, chat, reports, presence, operator rules |
 | `node scripts/smoke-relay.mjs` | server | The WebSocket relay accepts the players and refuses strangers |
+| `node scripts/smoke-duel.mjs` | server | Matchmaking, a whole server-refereed penalty duel, Elo, the `/live` socket (bad token refused, pairing pushed), the daily challenge, shared results and the `/r/<id>` page |
 | `node scripts/test-shootout.mjs` | nothing | The penalty shootout rules |
 | `node scripts/e2e-ui.mjs [--quick]` | server + Vite | Sign up in a real browser, choose a nation, play a World Cup match to full time, result saved (`--quick` skips the match) |
 | `node scripts/e2e-knockout.mjs` | server + Vite | A Round-of-32 game through extra time and a penalty shootout; the CPU takes its own penalties |
-| `node scripts/e2e-input.mjs` | Vite | Controller (simulated gamepad) and touch controls |
+| `node scripts/e2e-input.mjs` | Vite | Controller (simulated gamepad) and touch controls, the default and WASD keyboard layouts |
+| `node scripts/e2e-duel.mjs` | server + Vite | Two real browsers find each other through matchmaking and play a penalty duel through the UI; ratings and the leaderboard |
+| `node scripts/e2e-match.mjs` | server + Vite | A friendly with commentary, the goal replay (and skipping it), added time, and the switches that turn replays and commentary off |
 | `node scripts/e2e-friend.mjs [--relay\|--leave\|--abandon\|--invite]` | server + Vite | Two real browsers play a friend match end to end, in each of the situations in [MULTIPLAYER.md](MULTIPLAYER.md#testing-the-netcode) |
-| `node scripts/e2e-extras.mjs` | server + Vite | The friendly (11 v 11, half-time, share image), tutorial, club editor and worn kit, settings following the account, the app manifest and the leaderboard page |
+| `node scripts/e2e-extras.mjs` | server + Vite | The friendly (11 v 11, half-time, a shared link to a Serverpod-stored picture whose public image is fetched), the penalty shootout mode, tutorial, club editor and worn kit, settings following the account, the app manifest and the leaderboard page |
 | `node scripts/e2e-loopback.mjs` | Vite | Host and guest in one page: fuzzed streams, fouls, penalties, cards, hidden-tab ticks |
 | `node scripts/check-live.mjs` | internet | The deployed site: loads, deep links work, the API is reachable cross-origin. `APP=https://football.serverpod.space` |
 | `node scripts/make-icons.mjs` | Chrome | Regenerates the app icons in `src/client/public` (already committed) |
@@ -90,6 +93,26 @@ export SERVER_LOG="$TEMP/sp_out.log"
 The scripts launch Playwright against the installed Chrome or Edge (no browser download). Screenshots go to `.e2e-shots/` (git-ignored).
 
 Dev-only hooks (never present in a production build): the `/dev/loopback` route, `window.__game`, `window.__shoot`, `window.__fm`, and `localStorage['wc2026.forceRelay']='1'` to force the relay transport.
+
+### Port conflicts
+
+The defaults are API `:8080`, Insights `:8081`, web server `:8082`. If something else owns 8080, override them with Serverpod's environment variables and point the web app and the scripts at the new ports:
+
+```bash
+# server
+SERVERPOD_API_SERVER_PORT=8180 SERVERPOD_API_SERVER_PUBLIC_PORT=8180 \
+SERVERPOD_INSIGHTS_SERVER_PORT=8181 SERVERPOD_WEB_SERVER_PORT=8182 \
+dart bin/main.dart --apply-migrations > "$TEMP/sp_out.log" 2>&1
+
+# web app: src/client/.env.local (git-ignored; the env dir is the Vite root, src/client)
+VITE_API_URL=http://127.0.0.1:8180
+VITE_RELAY_URL=ws://127.0.0.1:8182
+
+# test scripts
+export API=http://127.0.0.1:8180 WS=ws://127.0.0.1:8182 SERVER_LOG="$TEMP/sp_out.log"
+```
+
+`..._PUBLIC_PORT` matters for the shared-picture URLs (the public cloud-storage URL is built from the public port). Restart both the server and Vite after changing these.
 
 ## Deploying
 
@@ -100,7 +123,7 @@ scloud deploy --yes --non-interactive          # about 3 minutes
 node ../../scripts/check-live.mjs              # verify (set APP if needed)
 ```
 
-Details, operations and secrets: [SERVERPOD.md §12](SERVERPOD.md#12-serverpod-cloud-deploy-and-operate). A first request right after a rollout can time out while the new instance settles; retry once.
+Details, operations and secrets: [SERVERPOD.md §17](SERVERPOD.md#17-serverpod-cloud-deploy-and-operate). A first request right after a rollout can time out while the new instance settles; retry once.
 
 Production sign-up sends a real email through Serverpod Cloud, so authenticated flows cannot be scripted against the live site without a real inbox. Test those locally.
 
@@ -109,6 +132,9 @@ Production sign-up sends a real email through Serverpod Cloud, so authenticated 
 | Symptom | Cause and fix |
 | --- | --- |
 | `dart test` fails with a locked DLL | A dev server is still running. Stop it first |
+| The e2e suite fails oddly while you edit code | Vite hot-reloads the page under the test. Run the suites while the tree is quiet |
+| "Share result" falls back to a download | Not signed in, or the picture was refused (PNG under 2 MB; the server accepts up to 3 MB requests) |
+| The live socket never connects | `VITE_RELAY_URL` (dev) must point at the web-server port; in production the socket uses the page origin |
 | Browser tests fail with "set SERVER_LOG" | Export `SERVER_LOG` to the server's output file |
 | The web app says it cannot reach the server | The server is not running on `:8080`, or `VITE_API_URL` points elsewhere |
 | "Your game version differs from the host" when joining a room | The two players run different builds; both reload the page |
