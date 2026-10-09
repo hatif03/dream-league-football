@@ -1,0 +1,70 @@
+DREAM LEAGUE FOOTBALL - 2-MINUTE DEMO SCRIPT (with Serverpod woven in)
+
+Audience: hackathon judges. Length: 2:00. Spoken narration is about 270 words (roughly 140 words a minute), so it fits with a little room for the game's own sounds.
+Rule for this cut: every Serverpod claim is said while the thing it describes is on screen. No architecture slide until the very end.
+
+BEFORE YOU RECORD (10 minutes)
+- Open https://football.serverpod.space in two browser windows side by side (call them LEFT and RIGHT), 1080p, sound on.
+- RIGHT: sign in beforehand with an account you already made. LEFT: have a fresh email address ready and sign up live, so the Serverpod email code is real. Keep the inbox open in another tab.
+- Both accounts need a favourite nation or a name that is easy to read on screen.
+- Play one practice duel on the two accounts beforehand so the ratings are not both 1000 and the first request is warm (a first request right after a deploy can be slow).
+- Have a chat app tab ready (Slack, Discord or WhatsApp Web) to paste the share link into.
+- Record the screen in one take per scene, not one long take. Cut on the hard timecodes below.
+
+THE SCRIPT
+
+[0:00-0:12] HOOK - the game
+Screen: a World Cup match already running. A goal goes in, the net ripples, the REPLAY badge shows.
+Narration (about 28 words):
+"This is Dream League Football: a FIFA-style football game in your browser, with replays, commentary and added time. And everything that has to be remembered, or trusted, runs on Serverpod."
+
+[0:12-0:27] ACCOUNT - authentication
+Screen: LEFT window, Sign up. Type an email, the code arrives (show the email for a second), type it, pick a player name and an avatar.
+Narration (about 33 words):
+"Sign-up is Serverpod's email identity provider. The code comes through Serverpod Cloud's email service, and every call after that carries a short-lived JWT. No auth code written by us."
+
+[0:27-0:47] WORLD CUP - endpoints, ORM, server-side simulation
+Screen: World Cup, pick Brazil, the group table, press Play match, play a few seconds, quick cut to the group table updating, then the bracket tab.
+Narration (about 45 words):
+"Solo mode is the real 2026 World Cup, saved on the server. When I finish a game, one endpoint stores it, simulates the other games of that matchday, and rebuilds the tables with real tie-breaks. The bracket logic is unit-tested against all 495 third-place combinations."
+
+[0:47-0:55] CONTROLS - quick beat, no Serverpod
+Screen: Settings, Keyboard, Layout switch to the EA FC WASD layout, then back to the controller tab.
+Narration (about 14 words):
+"Controls follow EA FC: switch layouts in one click, or plug in a pad."
+
+[0:55-1:30] THE MAIN EVENT - matchmaking, live push, server-refereed duel, Elo
+Screen: both windows side by side on the Online page, Penalty duel selected.
+ 0:55  LEFT presses Find a penalty duel ("Searching... 3s"). RIGHT presses it. Both windows jump into the duel at the same moment.
+ 1:05  Both pick a zone. Reveal: ball and keeper. Score updates. Two or three kicks, cut to the end.
+ 1:25  The result panel: "You win! +8 rating".
+Narration (about 78 words):
+"For a stranger match, there is matchmaking. Both of us press Find, and a Serverpod endpoint pairs us by rating, inside one database transaction so nobody is matched twice. A live WebSocket route, authenticated with the same JWT, pushes the match to both screens at once.
+This is a penalty duel, and the server is the referee. We each choose a zone in secret. Serverpod draws the result with secure randomness, so there is nothing in a browser to cheat. Even if we both close our tabs, a Serverpod future call settles the kick. Then Elo updates in the same transaction."
+
+[1:30-1:48] SHARE AND LEADERBOARD - cloud storage and web route
+Screen: Share result, "Link copied", paste it in the chat tab so the score picture preview appears. Then cut to the Leaderboard (Rating tab) showing both players.
+Narration (about 36 words):
+"Sharing uploads the score card to Serverpod Cloud storage, and a web route serves a preview page, so chat apps show the picture. The leaderboard reads the same ratings from the same PostgreSQL database."
+
+[1:48-2:00] CLOSE - one slide, 12 seconds
+Screen: a single clean slide (white text on the app's dark blue): left column "Serverpod features used", right the live URL. Content, one line each:
+ Email auth + JWT | 16 endpoints | ORM, transactions and row locks | migrations
+ WebSocket routes: /live and /relay | future calls: nightly cron + kick timeouts | cloud storage | serverpod_test
+ Deployed on Serverpod Cloud: football.serverpod.space
+Narration (about 33 words):
+"Authentication, endpoints, a transactional ORM, WebSockets, scheduled future calls, cloud storage, integration tests, and one-command deploys on Serverpod Cloud. Dream League Football: football.serverpod.space. Come and take a penalty."
+
+WORD COUNT CHECK
+Hook 28, account 33, World Cup 45, controls 14, main event 78, share 36, close 33 = about 267 words, plus pauses. If your first take runs long, cut the controls beat (-8 s) before touching anything else.
+
+IF YOU ONLY GET 90 SECONDS
+Drop the controls beat and the World Cup beat down to one sentence ("saved on the server, simulated and tabled by one endpoint"). Keep sign-up, the duel and the share link. Those three show auth, the database and transactions, WebSockets, future calls and cloud storage.
+
+WHAT TO SAY IF ASKED (one line each)
+- "Why not run the 11 v 11 match on the server?" It is a 60 frame-per-second simulation, cheap in one browser, expensive as a server process per room. The penalty duel is turn-based, so the server referees it. Both choices are deliberate.
+- "Is it really live?" Yes: https://football.serverpod.space, API https://football.api.serverpod.space. The deployed site was checked after the last rollout. Sign-up sends a real email.
+- "How is it tested?" 31 Dart tests, including serverpod_test integration tests that play a whole duel through the real endpoints, plus Playwright browser tests with two real browsers.
+
+SHOT LIST SUMMARY
+1 Match + replay  2 Sign-up + email code  3 World Cup table and bracket  4 Settings layout switch  5 Two-window matchmaking and duel  6 Share link in chat + leaderboard  7 Closing slide
