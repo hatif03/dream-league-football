@@ -4,6 +4,12 @@ An arcade, FIFA-style football game that runs in your browser, with a **[Serverp
 
 Play it: <https://football.serverpod.space> (web) · API: <https://football.api.serverpod.space>
 
+## Demo video
+
+[![Dream League Football demo video](https://img.youtube.com/vi/kS4Q95fD7B4/maxresdefault.jpg)](https://youtu.be/kS4Q95fD7B4)
+
+Watch it on YouTube: <https://youtu.be/kS4Q95fD7B4>
+
 ![Home screen](docs/img/home.png)
 
 | | |
